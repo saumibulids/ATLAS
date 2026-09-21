@@ -10,3 +10,4 @@
 - Build only the phase I ask for. Do not implement later phases early.
 - After each task: run the tests, and tell me what you built, how to run it, and what is left.
 - If unsure about an Azure/Foundry API detail, check the official docs or leave a clear TODO. Do not invent method names.
+- Never read, print, or edit backend/.env. Only edit backend/.env.example.
