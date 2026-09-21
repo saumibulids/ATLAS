@@ -18,6 +18,8 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
     )
     atlas_llm_mode: str = Field(default="mock", alias="ATLAS_LLM_MODE")
+    chat_history_limit: int = Field(default=10, alias="CHAT_HISTORY_LIMIT")
+    session_timeout_minutes: int = Field(default=30, alias="SESSION_TIMEOUT_MINUTES")
 
     @property
     def cors_origin_list(self) -> list[str]:

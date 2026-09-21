@@ -1,5 +1,7 @@
 """Pydantic schemas for chat requests and responses."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -16,5 +18,14 @@ class StudentStateSummary(BaseModel):
 
 
 class ChatResponse(BaseModel):
+    session_id: int
     reply: str
     student_state: StudentStateSummary
+
+
+class MessageRead(BaseModel):
+    id: int
+    session_id: int
+    role: str
+    content: str
+    created_at: datetime

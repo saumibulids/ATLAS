@@ -1,4 +1,4 @@
-"""Session and message models for Phase 1 chat storage."""
+"""Session and message models for Phase 2 chat storage."""
 
 from datetime import datetime
 

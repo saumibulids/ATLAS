@@ -14,6 +14,7 @@ def test_chat_returns_mock_reply_and_student_state(client):
 
     assert response.status_code == 200
     body = response.json()
+    assert body["session_id"] > 0
     assert "Routing is how" in body["reply"]
     assert "question" in body["reply"].lower()
     assert body["student_state"] == {"mastery": 0.64, "confidence": 0.55}

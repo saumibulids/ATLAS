@@ -1,8 +1,10 @@
-"""Student model for Phase 1."""
+"""Student model for Phase 2."""
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String
+from typing import Any
+
+from sqlalchemy import DateTime, Integer, JSON, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.database import Base
@@ -16,6 +18,8 @@ class Student(Base):
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     grade: Mapped[int | None] = mapped_column(Integer, nullable=True)
     language: Mapped[str] = mapped_column(String(64), default="English")
+    explanation_style: Mapped[str] = mapped_column(String(64), default="examples")
+    preferences: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     subject: Mapped[str | None] = mapped_column(String(255), nullable=True)
     topic: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

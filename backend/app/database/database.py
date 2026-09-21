@@ -2,7 +2,7 @@
 
 from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.core.config import get_settings
@@ -27,6 +27,30 @@ def import_models() -> None:
 def init_db() -> None:
     import_models()
     Base.metadata.create_all(bind=engine)
+    _ensure_phase2_columns()
+
+
+def _ensure_phase2_columns() -> None:
+    if not settings.database_url.startswith("sqlite"):
+        return
+
+    inspector = inspect(engine)
+    if "students" not in inspector.get_table_names():
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("students")}
+    statements = []
+    if "explanation_style" not in existing_columns:
+        statements.append("ALTER TABLE students ADD COLUMN explanation_style VARCHAR(64) DEFAULT 'examples'")
+    if "preferences" not in existing_columns:
+        statements.append("ALTER TABLE students ADD COLUMN preferences JSON DEFAULT '{}'")
+
+    if not statements:
+        return
+
+    with engine.begin() as connection:
+        for statement in statements:
+            connection.execute(text(statement))
 
 
 def get_db() -> Generator:
