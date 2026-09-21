@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #1E1B17;
+    background-color: #FFF8F1;
+  }
+}
+
+/* Desk bullet journal dot grid */
+.desk-dot-grid {
+  background-image: radial-gradient(rgba(78, 124, 178, 0.18) 1.25px, transparent 1.25px);
+  background-size: 18px 18px;
+}
+
+/* Tactile paper styling */
+.paper-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(78, 124, 178, 0.16);
+  box-shadow: 0 2px 4px rgba(32, 63, 154, 0.04), 0 6px 16px rgba(32, 63, 154, 0.06);
+}
+
+.paper-card-hover {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.paper-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(32, 63, 154, 0.08), 0 2px 6px rgba(32, 63, 154, 0.04);
+}
+
+/* Tactile buttons */
+.tactile-btn-primary {
+  background-color: #203F9A;
+  color: #ffffff;
+  box-shadow: 0 3px 0px #142866;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.tactile-btn-primary:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0px #142866;
+}
+
+.tactile-btn-secondary {
+  background-color: #ffffff;
+  color: #203F9A;
+  border: 1px solid rgba(78, 124, 178, 0.25);
+  box-shadow: 0 2px 0px rgba(78, 124, 178, 0.2);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.tactile-btn-secondary:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0px rgba(78, 124, 178, 0.15);
+}
+
+.tactile-btn-pink {
+  background-color: #E84797;
+  color: #ffffff;
+  box-shadow: 0 3px 0px #A82568;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.tactile-btn-pink:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0px #A82568;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(78, 124, 178, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(78, 124, 178, 0.35);
+}

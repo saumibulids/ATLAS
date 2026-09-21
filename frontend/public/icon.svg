@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#203F9A"/>
+      <stop offset="100%" stop-color="#12245C"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E84797"/>
+      <stop offset="100%" stop-color="#FF72B6"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0A1230" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded rect -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle decorative tactile grid lines -->
+  <path d="M96 128h320M96 192h320M96 256h320M96 320h320M96 384h320" stroke="#FFF8F1" stroke-opacity="0.07" stroke-width="2" stroke-dasharray="4 6"/>
+  <path d="M128 96v320M192 96v320M256 96v320M320 96v320M384 96v320" stroke="#FFF8F1" stroke-opacity="0.07" stroke-width="2" stroke-dasharray="4 6"/>
+
+  <!-- Tactile Desk Notebook Symbol -->
+  <g filter="url(#shadow)" transform="translate(256, 256)">
+    <!-- Back pages -->
+    <path d="M-130 50 C -60 25, -20 25, 0 45 C 20 25, 60 25, 130 50 L 130 -85 C 60 -110, 20 -110, 0 -90 C -20 -110, -60 -110, -130 -85 Z" fill="#94C2DA" opacity="0.6"/>
+    
+    <!-- Middle book pages -->
+    <path d="M-125 60 C -60 35, -20 35, 0 55 C 20 35, 60 35, 125 60 L 125 -75 C 60 -100, 20 -100, 0 -80 C -20 -100, -60 -100, -125 -75 Z" fill="#FAF2EA"/>
+    
+    <!-- Left page text lines -->
+    <line x1="-105" y1="-45" x2="-25" y2="-45" stroke="#203F9A" stroke-width="5" stroke-linecap="round" opacity="0.3"/>
+    <line x1="-105" y1="-20" x2="-35" y2="-20" stroke="#203F9A" stroke-width="5" stroke-linecap="round" opacity="0.3"/>
+    <line x1="-105" y1="5" x2="-45" y2="5" stroke="#203F9A" stroke-width="5" stroke-linecap="round" opacity="0.3"/>
+    <line x1="-105" y1="30" x2="-25" y2="30" stroke="#203F9A" stroke-width="5" stroke-linecap="round" opacity="0.3"/>
+
+    <!-- Right page text lines -->
+    <line x1="25" y1="-45" x2="105" y2="-45" stroke="#203F9A" stroke-width="5" stroke-linecap="round" opacity="0.3"/>
+    <line x1="25" y1="-20" x2="95" y2="-20" stroke="#203F9A" stroke-width="5" stroke-linecap="round" opacity="0.3"/>
+    <line x1="25" y1="5" x2="85" y2="5" stroke="#203F9A" stroke-width="5" stroke-linecap="round" opacity="0.3"/>
+
+    <!-- Center spine bookmark ribbon in pink -->
+    <path d="M-8 -80 L8 -80 L8 85 L0 75 L-8 85 Z" fill="url(#accentGrad)"/>
+
+    <!-- Floating Graduation Cap Icon at Top Center -->
+    <g transform="translate(0, -95)">
+      <!-- Cap base -->
+      <polygon points="0,-48 85,-16 0,16 -85,-16" fill="#FFF8F1"/>
+      <path d="M-45 4 L-45 34 C -45 52, 45 52, 45 34 L 45 4" fill="#E84797" opacity="0.9"/>
+      <!-- Tassel -->
+      <path d="M0 -16 L65 0 L70 36" fill="none" stroke="#FFD56B" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="70" cy="38" r="4" fill="#FFD56B"/>
+    </g>
+  </g>
+
+  <!-- Golden spark indicator -->
+  <path d="M380 120 Q395 120 400 105 Q405 120 420 120 Q405 120 400 135 Q395 120 380 120 Z" fill="#FFD56B"/>
+  <path d="M100 370 Q110 370 115 360 Q120 370 130 370 Q120 370 115 380 Q110 370 100 370 Z" fill="#E84797"/>
+</svg>

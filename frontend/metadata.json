@@ -1,0 +1,6 @@
+{
+  "name": "Atlas Study Studio",
+  "description": "Tactile desk companion and AI study studio for computer science and exam mastery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
