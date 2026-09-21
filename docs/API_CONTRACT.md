@@ -311,3 +311,187 @@ Response:
   "note": null
 }
 ```
+
+## Start Focus Session
+
+`POST /api/focus/start`
+
+Request:
+
+```json
+{
+  "student_id": "S001",
+  "topic": "routing",
+  "mode": "single",
+  "duration_minutes": 45
+}
+```
+
+The backend builds the session plan by scaling the spec §20 phases (quick
+revision, learn, practice, notes/revision, mini assessment, reflection) to the
+chosen duration — the phases always add up to exactly `duration_minutes`. For a
+low-mastery student more time goes to *learn*; for a high-mastery student more
+time goes to *practice* and *mini assessment*. `suggested_activity` points at an
+existing feature (`notes`, `flashcards`, or `practice`) for that topic.
+
+Durations: `25`, `45`, `60`, or custom `5–180` minutes. `mode` is `"single"`
+only in this phase (`"pomodoro"` returns `400`). One active session per student:
+starting a second one returns `409`. A missing student returns `404`.
+
+Response:
+
+```json
+{
+  "session_id": 8,
+  "topic": "routing",
+  "mode": "single",
+  "planned_minutes": 45,
+  "started_at": "2026-09-21T06:00:00",
+  "plan": [
+    { "phase": "quick_revision", "start_minute": 0, "end_minute": 5, "suggested_activity": "flashcards" },
+    { "phase": "learn", "start_minute": 5, "end_minute": 20, "suggested_activity": "notes" },
+    { "phase": "practice", "start_minute": 20, "end_minute": 30, "suggested_activity": "practice" },
+    { "phase": "notes_revision", "start_minute": 30, "end_minute": 38, "suggested_activity": "notes" },
+    { "phase": "mini_assessment", "start_minute": 38, "end_minute": 43, "suggested_activity": "practice" },
+    { "phase": "reflection", "start_minute": 43, "end_minute": 45, "suggested_activity": "notes" }
+  ],
+  "remaining_seconds": 2700,
+  "status": "active",
+  "message": "Focus session started."
+}
+```
+
+## Get Focus Session State
+
+`GET /api/focus/8`
+
+The backend is the source of truth for time: `remaining_seconds` and
+`elapsed_seconds` are computed from `started_at` and the interruption records on
+every read. If the session was never completed and is read after its planned end
+plus the 10-minute grace period, it is marked `abandoned` automatically.
+
+Response:
+
+```json
+{
+  "session_id": 8,
+  "student_id": "S001",
+  "topic": "routing",
+  "mode": "single",
+  "planned_minutes": 45,
+  "status": "active",
+  "started_at": "2026-09-21T06:00:00",
+  "ended_at": null,
+  "elapsed_seconds": 300,
+  "remaining_seconds": 2400,
+  "active_seconds": 0,
+  "break_seconds": 0,
+  "interruption_count": 0,
+  "current_round": 1,
+  "questions_attempted": null,
+  "concepts_studied": [],
+  "plan": [
+    { "phase": "quick_revision", "start_minute": 0, "end_minute": 5, "suggested_activity": "flashcards" },
+    { "phase": "learn", "start_minute": 5, "end_minute": 20, "suggested_activity": "notes" },
+    { "phase": "practice", "start_minute": 20, "end_minute": 30, "suggested_activity": "practice" },
+    { "phase": "notes_revision", "start_minute": 30, "end_minute": 38, "suggested_activity": "notes" },
+    { "phase": "mini_assessment", "start_minute": 38, "end_minute": 43, "suggested_activity": "practice" },
+    { "phase": "reflection", "start_minute": 43, "end_minute": 45, "suggested_activity": "notes" }
+  ],
+  "current_phase": {
+    "phase": "learn",
+    "start_minute": 5,
+    "end_minute": 20,
+    "suggested_activity": "notes"
+  },
+  "message": null
+}
+```
+
+## Interrupt Focus Session
+
+`POST /api/focus/8/interrupt`
+
+Records a tab-hidden event (`interruption_count` + 1, `hidden_at`). The timer is
+paused while the tab is away, so the remaining time is preserved. No request
+body. Returns `409` if the session already ended.
+
+Response:
+
+```json
+{
+  "session_id": 8,
+  "message": "Looks like you stepped away. Your focus session is still running. Come back when you're ready.",
+  "remaining_seconds": 2100,
+  "status": "active"
+}
+```
+
+## Resume Focus Session
+
+`POST /api/focus/8/resume`
+
+Records the tab-visible event (`visible_at`, `seconds_away`). No request body.
+Returns `409` if the session already ended.
+
+Response:
+
+```json
+{
+  "session_id": 8,
+  "message": "Welcome back! You have 35 minutes remaining.",
+  "remaining_seconds": 2100,
+  "status": "active"
+}
+```
+
+## Complete Focus Session
+
+`POST /api/focus/8/complete`
+
+Request:
+
+```json
+{
+  "questions_attempted": 6,
+  "concepts_studied": ["routing-table"]
+}
+```
+
+Both fields are optional. The session is marked `completed` when the actual
+active time (clock time minus interruption time) reaches at least **80%** of the
+planned duration, otherwise `abandoned` (neutral message — this is study
+support, not surveillance). A completed session calls the Phase 5 gamification
+hook once. Returns `409` if the session already ended.
+
+Response (completed):
+
+```json
+{
+  "session_id": 8,
+  "status": "completed",
+  "active_seconds": 2400,
+  "planned_minutes": 45,
+  "message": "Focus session completed.",
+  "gamification": {
+    "xp_awarded": 50,
+    "new_total": 50,
+    "level_up": false,
+    "badges_unlocked": ["first_steps"],
+    "reason": null
+  }
+}
+```
+
+Response (abandoned, `gamification` is `null`):
+
+```json
+{
+  "session_id": 8,
+  "status": "abandoned",
+  "active_seconds": 900,
+  "planned_minutes": 45,
+  "message": "Focus session ended before reaching the completion threshold. You can start a new session whenever you're ready.",
+  "gamification": null
+}
+```

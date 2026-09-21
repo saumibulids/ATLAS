@@ -78,6 +78,24 @@ GAMIFICATION_ACTION_CATEGORIES = {
     "focus_session_completed": "focus",
 }
 
+# Phase 6 focus mode
+FOCUS_ALLOWED_DURATIONS_MINUTES = [25, 45, 60]
+FOCUS_CUSTOM_DURATION_MIN_MINUTES = 5
+FOCUS_CUSTOM_DURATION_MAX_MINUTES = 180
+FOCUS_COMPLETION_THRESHOLD = 0.80
+FOCUS_ABANDON_GRACE_MINUTES = 10
+# Spec section 20: 45-minute session split as percentages of the total duration (sums to 100).
+FOCUS_PHASE_SPLIT_PERCENT = {
+    "quick_revision": 11,
+    "learn": 34,
+    "practice": 22,
+    "notes_revision": 18,
+    "mini_assessment": 11,
+    "reflection": 4,
+}
+# Percentage points shifted between learning and practice/assessment for adapted mastery bands.
+FOCUS_MASTERY_LEARN_SHIFT_PERCENT = 10
+
 GAMIFICATION_BADGES = {
     "first_steps": {
         "name": "First Steps",
