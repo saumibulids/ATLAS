@@ -34,6 +34,7 @@ app.include_router(assessments.router)
 app.include_router(flashcards.router)
 app.include_router(gamification.router)
 app.include_router(focus.router)
+app.include_router(focus.analytics_router)
 
 
 @app.get("/health", tags=["health"])

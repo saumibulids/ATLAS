@@ -29,6 +29,8 @@ class FocusSession(Base):
     ended_at: Mapped[dt.datetime | None] = mapped_column(DateTime, nullable=True)
     active_seconds: Mapped[int] = mapped_column(Integer, default=0)
     break_seconds: Mapped[int] = mapped_column(Integer, default=0)
+    # When the current study/break segment began (pomodoro; backend is the time source).
+    segment_started_at: Mapped[dt.datetime | None] = mapped_column(DateTime, nullable=True)
     interruption_count: Mapped[int] = mapped_column(Integer, default=0)
     current_round: Mapped[int] = mapped_column(Integer, default=1)
     questions_attempted: Mapped[int | None] = mapped_column(Integer, nullable=True)

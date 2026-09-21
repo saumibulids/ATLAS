@@ -327,6 +327,24 @@ def test_start_validation(client):
         json={"student_id": "S001", "topic": "routing", "mode": "pomodoro", "duration_minutes": 45},
     )
     assert pomodoro.status_code == 400
+    # A preset must be known.
+    unknown = client.post(
+        "/api/focus/start",
+        json={"student_id": "S001", "topic": "routing", "mode": "pomodoro", "preset": "99/99"},
+    )
+    assert unknown.status_code == 400
+    # Preset plus explicit rounds is valid.
+    valid = client.post(
+        "/api/focus/start",
+        json={"student_id": "S001", "topic": "routing", "mode": "pomodoro", "preset": "25/5", "rounds": 2},
+    )
+    assert valid.status_code == 201
+    body = valid.json()
+    assert body["mode"] == "pomodoro"
+    assert body["study_minutes"] == 25
+    assert body["break_minutes"] == 5
+    assert body["rounds"] == 2
+    assert sum(entry["end_minute"] - entry["start_minute"] for entry in body["plan"]) == 25 * 2 + 5
     missing = client.post(
         "/api/focus/start",
         json={"student_id": "NOPE", "topic": "routing", "mode": "single", "duration_minutes": 45},

@@ -36,20 +36,35 @@ def create_focus_session(
     planned_minutes: int,
     started_at,
     plan: list[dict] | None,
+    study_minutes: int | None = None,
+    break_minutes: int | None = None,
+    rounds: int | None = None,
 ) -> FocusSession:
     session = FocusSession(
         student_id=student_pk,
         topic=topic,
         mode=mode,
         planned_minutes=planned_minutes,
-        study_minutes=planned_minutes,
+        study_minutes=study_minutes if study_minutes is not None else planned_minutes,
+        break_minutes=break_minutes or 0,
+        rounds=rounds or 1,
         started_at=started_at,
+        segment_started_at=started_at,
         plan=plan,
     )
     db.add(session)
     db.commit()
     db.refresh(session)
     return session
+
+
+def get_focus_sessions_for_student(db: Session, student_pk: int) -> list[FocusSession]:
+    statement = (
+        select(FocusSession)
+        .where(FocusSession.student_id == student_pk)
+        .order_by(FocusSession.started_at.desc())
+    )
+    return list(db.scalars(statement).all())
 
 
 def add_interruption(db: Session, session: FocusSession, hidden_at) -> FocusInterruption:

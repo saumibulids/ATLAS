@@ -96,6 +96,18 @@ FOCUS_PHASE_SPLIT_PERCENT = {
 # Percentage points shifted between learning and practice/assessment for adapted mastery bands.
 FOCUS_MASTERY_LEARN_SHIFT_PERCENT = 10
 
+# Phase 6b pomodoro mode (spec section 22)
+FOCUS_POMODORO_PRESETS = {
+    "25/5": {"study_minutes": 25, "break_minutes": 5},
+    "45/10": {"study_minutes": 45, "break_minutes": 10},
+}
+FOCUS_POMODORO_STUDY_MIN_MINUTES = 5
+FOCUS_POMODORO_STUDY_MAX_MINUTES = 90
+FOCUS_POMODORO_BREAK_MIN_MINUTES = 1
+FOCUS_POMODORO_BREAK_MAX_MINUTES = 30
+FOCUS_POMODORO_ROUNDS_MIN = 1
+FOCUS_POMODORO_ROUNDS_MAX = 8
+
 GAMIFICATION_BADGES = {
     "first_steps": {
         "name": "First Steps",
