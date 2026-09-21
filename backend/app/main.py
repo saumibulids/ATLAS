@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import assessments, chat, flashcards, students, topics
+from app.api.routes import assessments, chat, flashcards, gamification, students, topics
 from app.core.config import get_settings
 from app.database.database import init_db
 
@@ -32,6 +32,7 @@ app.include_router(chat.router)
 app.include_router(topics.router)
 app.include_router(assessments.router)
 app.include_router(flashcards.router)
+app.include_router(gamification.router)
 
 
 @app.get("/health", tags=["health"])

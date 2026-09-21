@@ -28,6 +28,7 @@ from app.schemas.assessment import (
     QuestionResultRead,
     ScoreSummaryRead,
 )
+from app.services.gamification_service import award, combine_awards
 
 
 class AssessmentAlreadySubmittedError(Exception):
@@ -88,8 +89,10 @@ def submit_assessment_answers(
     current_mastery = mastery_before
     results = []
     correct_count = 0
+    gamification_awards = []
 
     for question in questions:
+        previous_mistakes = list(state.mistakes or [])
         submitted = submitted_by_id.get(question.id)
         raw_answer = submitted.answer if submitted else ""
         hint_used = submitted.hint_used if submitted else False
@@ -136,6 +139,30 @@ def submit_assessment_answers(
             mastery_before=current_mastery,
             mastery_after=mastery_after,
         )
+        gamification_awards.append(
+            award(
+                db,
+                student.student_id,
+                "practice_question_attempted",
+                topic=topic_slug,
+                meta={"mastery": mastery_after},
+            )
+        )
+        if question.difficulty == 3:
+            gamification_awards.append(award(db, student.student_id, "hard_question_attempted", topic=topic_slug))
+        if correct and question.difficulty == 3:
+            gamification_awards.append(award(db, student.student_id, "knowledge_transfer", topic=topic_slug))
+        corrected = _corrected_misconception(previous_mistakes, question)
+        if correct and corrected:
+            gamification_awards.append(
+                award(
+                    db,
+                    student.student_id,
+                    "mistake_corrected",
+                    topic=topic_slug,
+                    meta={"misconception": corrected},
+                )
+            )
         results.append(
             QuestionResultRead(
                 question_id=question.id,
@@ -148,6 +175,7 @@ def submit_assessment_answers(
         current_mastery = mastery_after
 
     mark_assessment_submitted(db, assessment)
+    gamification_awards.append(award(db, student.student_id, "practice_completed", topic=topic_slug))
     total = len(questions)
     return AssessmentSubmitResponse(
         assessment_id=assessment.id,
@@ -168,6 +196,7 @@ def submit_assessment_answers(
                 "mistakes": state.mistakes,
             }
         ),
+        gamification=combine_awards(gamification_awards),
     )
 
 
@@ -262,6 +291,14 @@ def _is_repeated_misconception(mistakes: list[str], misconception_tag: str | Non
     if not misconception_tag:
         return False
     return any(mistake.casefold() == misconception_tag.casefold() for mistake in mistakes)
+
+
+def _corrected_misconception(mistakes: list[str], question) -> str | None:
+    tags = set((question.misconception_tags or {}).values())
+    for mistake in mistakes:
+        if mistake in tags:
+            return mistake
+    return None
 
 
 def _student_by_internal_id(db: Session, student_pk: int):

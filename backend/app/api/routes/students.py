@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
+from app.schemas.gamification import ActivityRequest, GamificationAwardRead
 from app.schemas.progress import NextActivityRead, ProgressRead
 from app.schemas.student import SessionRead, StudentCreate, StudentPatch, StudentRead
 from app.services.student_service import (
@@ -14,6 +15,7 @@ from app.services.student_service import (
     list_student_sessions,
     update_student_profile,
 )
+from app.services.gamification_service import award
 
 router = APIRouter(prefix="/api/students", tags=["students"])
 
@@ -68,3 +70,15 @@ def read_student_next_activity(
     if recommendation is None:
         raise HTTPException(status_code=404, detail="Student not found")
     return recommendation
+
+
+@router.post("/{student_id}/activity", response_model=GamificationAwardRead)
+def record_student_activity(
+    student_id: str,
+    payload: ActivityRequest,
+    db: Session = Depends(get_db),
+) -> GamificationAwardRead:
+    result = award(db, student_id, payload.type, topic=payload.topic)
+    if result.reason == "Student not found":
+        raise HTTPException(status_code=404, detail="Student not found")
+    return result

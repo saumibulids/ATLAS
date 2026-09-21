@@ -22,6 +22,7 @@ def import_models() -> None:
     from app.models.assessment import Answer, Assessment, Question  # noqa: F401
     from app.models.curriculum import Concept, Subject, Topic  # noqa: F401
     from app.models.flashcard import Flashcard, FlashcardReview  # noqa: F401
+    from app.models.gamification import Achievement, DailyGoal, Streak, StudentXP  # noqa: F401
     from app.models.learning_event import LearningEvent  # noqa: F401
     from app.models.learning_state import LearningState  # noqa: F401
     from app.models.session import Message, Session  # noqa: F401

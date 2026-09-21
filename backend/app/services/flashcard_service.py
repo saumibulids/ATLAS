@@ -17,6 +17,7 @@ from app.engine.confidence import adjust_confidence
 from app.engine.mastery import apply_mastery_event, mastery_band_label
 from app.engine.misconceptions import add_misconception
 from app.schemas.flashcard import FlashcardDeckRead, FlashcardRead, FlashcardReviewResponse
+from app.services.gamification_service import award, combine_awards
 
 RATING_INTERVALS = {
     "didnt_know": timedelta(days=1),
@@ -71,6 +72,7 @@ def review_flashcard(
 
     state = student.learning_state
     topic_slug = card.topic_slug
+    previous_mistakes = list(state.mistakes or [])
     concept_scores = dict(state.concept_scores or {})
     mastery_before = float(concept_scores.get(topic_slug, state.mastery or 0.0))
     repeated = _is_repeated_misconception(state.mistakes or [], card.misconception_tag)
@@ -96,6 +98,27 @@ def review_flashcard(
         rating=rating,
         next_review_at=next_review_at,
     )
+    gamification_awards = [
+        award(
+            db,
+            student.student_id,
+            "flashcard_reviewed",
+            topic=topic_slug,
+            meta={"mastery": mastery_after},
+        )
+    ]
+    if rating in {"knew_it", "easy"} and _is_repeated_misconception(previous_mistakes, card.misconception_tag):
+        gamification_awards.append(
+            award(
+                db,
+                student.student_id,
+                "mistake_corrected",
+                topic=topic_slug,
+                meta={"misconception": card.misconception_tag},
+            )
+        )
+    if _topic_deck_completed(db, student, topic_slug):
+        gamification_awards.append(award(db, student.student_id, "revision_completed", topic=topic_slug))
     create_learning_event(
         db,
         student_id=student.id,
@@ -115,6 +138,7 @@ def review_flashcard(
         mastery_band=mastery_band_label(mastery_after),
         misconception_tag=card.misconception_tag if rating == "didnt_know" else None,
         note="This card targets a common mix-up to review." if rating == "didnt_know" and card.misconception_tag else None,
+        gamification=combine_awards(gamification_awards),
     )
 
 
@@ -188,3 +212,13 @@ def _resolve_topic_slug(learning_state, topic: str | None) -> str:
 
 def _slugify(value: str) -> str:
     return " ".join(value.strip().casefold().split()).replace(" ", "-")
+
+
+def _topic_deck_completed(db: Session, student, topic_slug: str) -> bool:
+    topic_card_ids = {card.id for card in get_flashcards_for_topic(db, topic_slug)}
+    reviewed_card_ids = {
+        review.flashcard_id
+        for review in get_reviews_for_student(db, student)
+        if review.flashcard_id in topic_card_ids
+    }
+    return bool(topic_card_ids) and topic_card_ids <= reviewed_card_ids

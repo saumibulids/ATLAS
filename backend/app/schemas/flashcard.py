@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.gamification import GamificationAwardRead
+
 
 class FlashcardRead(BaseModel):
     id: int
@@ -40,3 +42,4 @@ class FlashcardReviewResponse(BaseModel):
     mastery_band: str
     misconception_tag: str | None = None
     note: str | None = None
+    gamification: GamificationAwardRead | None = None

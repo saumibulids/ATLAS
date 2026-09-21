@@ -21,6 +21,7 @@ from app.engine.confidence import adjust_confidence
 from app.engine.mastery import apply_mastery_event
 from app.engine.misconceptions import add_misconception
 from app.schemas.chat import ChatRequest, ChatResponse, MessageRead, StudentStateSummary
+from app.services.gamification_service import award, combine_awards
 
 PROMPT_PATH = Path(__file__).resolve().parents[1] / "agents" / "prompts" / "atlas_system_prompt.md"
 
@@ -46,7 +47,18 @@ def chat_with_atlas(db: Session, payload: ChatRequest) -> ChatResponse | None:
     )
     add_message(db, chat_session.id, "user", payload.message)
     analysis = _safe_analyze_turn(payload.message, _analysis_context(student, payload))
+    existing_mistakes = list(student.learning_state.mistakes or [])
+    mastery_before = student.learning_state.mastery
     _apply_turn_analysis(db, student, chat_session.id, analysis, payload.topic)
+    gamification = _award_chat_gamification(
+        db,
+        student.student_id,
+        payload.topic,
+        analysis,
+        existing_mistakes,
+        mastery_before,
+        student.learning_state.mastery,
+    )
 
     system_prompt = _build_system_prompt(student)
     reply = ask_atlas(
@@ -63,6 +75,7 @@ def chat_with_atlas(db: Session, payload: ChatRequest) -> ChatResponse | None:
             mastery=student.learning_state.mastery,
             confidence=student.learning_state.confidence,
         ),
+        gamification=gamification,
     )
 
 
@@ -206,3 +219,43 @@ def _updated_confidence(current_confidence: float, analysis: TurnAnalysis) -> fl
 
 def _is_repeat_misconception(existing_mistakes: list[str], misconception: str) -> bool:
     return any(item.casefold() == misconception.casefold() for item in existing_mistakes)
+
+
+def _award_chat_gamification(
+    db: Session,
+    student_id: str,
+    topic: str,
+    analysis: TurnAnalysis,
+    existing_mistakes: list[str],
+    mastery_before: float,
+    mastery_after: float,
+):
+    topic_slug = _slugify(topic)
+    awards = [
+        award(
+            db,
+            student_id,
+            "practice_question_attempted",
+            topic=topic_slug,
+            meta={"mastery": mastery_after},
+        )
+    ]
+    if mastery_before <= 0.50:
+        awards.append(award(db, student_id, "weak_topic_revisited", topic=topic_slug))
+    if analysis.transfer and analysis.answer_quality == "correct":
+        awards.append(award(db, student_id, "knowledge_transfer", topic=topic_slug))
+    if analysis.answer_quality == "correct" and existing_mistakes:
+        awards.append(
+            award(
+                db,
+                student_id,
+                "mistake_corrected",
+                topic=topic_slug,
+                meta={"misconception": existing_mistakes[0]},
+            )
+        )
+    return combine_awards(awards)
+
+
+def _slugify(value: str) -> str:
+    return " ".join(value.strip().casefold().split()).replace(" ", "-")

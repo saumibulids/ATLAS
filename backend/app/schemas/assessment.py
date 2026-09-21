@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel, Field
 
+from app.schemas.gamification import GamificationAwardRead
+
 
 class AssessmentCreateRequest(BaseModel):
     student_id: str = Field(min_length=1)
@@ -60,3 +62,4 @@ class AssessmentSubmitResponse(BaseModel):
     mastery_after: float
     mastery_band: str
     next_activity: dict[str, str]
+    gamification: GamificationAwardRead | None = None
