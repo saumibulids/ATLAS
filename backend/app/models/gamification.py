@@ -1,6 +1,6 @@
 """Gamification models for Phase 5."""
 
-from datetime import date, datetime
+import datetime as dt
 from typing import Any
 
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, JSON, String, UniqueConstraint
@@ -18,7 +18,7 @@ class StudentXP(Base):
     xp: Mapped[int] = mapped_column(Integer)
     topic: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     meta: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=dt.datetime.utcnow, index=True)
 
 
 class Achievement(Base):
@@ -29,7 +29,7 @@ class Achievement(Base):
     student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), index=True)
     badge_id: Mapped[str] = mapped_column(String(255), index=True)
     name: Mapped[str] = mapped_column(String(255))
-    unlocked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    unlocked_at: Mapped[dt.datetime] = mapped_column(DateTime, default=dt.datetime.utcnow)
 
 
 class Streak(Base):
@@ -39,7 +39,7 @@ class Streak(Base):
     student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), unique=True, index=True)
     current: Mapped[int] = mapped_column(Integer, default=0)
     longest: Mapped[int] = mapped_column(Integer, default=0)
-    last_active_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    last_active_date: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
 
 
 class DailyGoal(Base):
@@ -48,7 +48,7 @@ class DailyGoal(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), index=True)
-    date: Mapped[date] = mapped_column(Date, index=True)
+    date: Mapped[dt.date] = mapped_column(Date, index=True)
     targets: Mapped[dict[str, int]] = mapped_column(JSON, default=dict)
     progress: Mapped[dict[str, int]] = mapped_column(JSON, default=dict)
     completed: Mapped[bool] = mapped_column(Boolean, default=False)
