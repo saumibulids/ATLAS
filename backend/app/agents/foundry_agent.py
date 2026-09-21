@@ -1,6 +1,20 @@
 """ATLAS Foundry adapter with a local mock mode."""
 
+import json
+from typing import Literal
+
+from pydantic import BaseModel, ValidationError
+
 from app.core.config import get_settings
+
+
+class TurnAnalysis(BaseModel):
+    concept: str
+    answer_quality: Literal["correct", "partial", "incorrect", "dont_know", "none"]
+    hint_used: bool
+    transfer: bool
+    misconception: str | None
+    asked_for_confirmation: bool
 
 
 def ask_atlas(system_prompt: str, history: list[dict[str, str]], user_message: str) -> str:
@@ -39,6 +53,23 @@ def ask_atlas(system_prompt: str, history: list[dict[str, str]], user_message: s
     return response.output_text
 
 
+def analyze_turn(student_message: str, tutor_context: dict[str, object]) -> TurnAnalysis:
+    settings = get_settings()
+    mode = settings.atlas_llm_mode.lower()
+
+    if mode == "mock":
+        return _mock_analyze_turn(student_message, tutor_context)
+
+    if mode != "foundry":
+        raise ValueError("ATLAS_LLM_MODE must be either 'mock' or 'foundry'.")
+
+    try:
+        raw_response = _ask_foundry_for_turn_analysis(student_message, tutor_context)
+        return TurnAnalysis.model_validate(json.loads(raw_response))
+    except (json.JSONDecodeError, ValidationError, ValueError, AttributeError):
+        return _empty_turn_analysis(tutor_context)
+
+
 def _compose_prompt(system_prompt: str, history: list[dict[str, str]], user_message: str) -> str:
     history_lines = [
         f"{message.get('role', 'unknown')}: {message.get('content', '')}"
@@ -49,4 +80,113 @@ def _compose_prompt(system_prompt: str, history: list[dict[str, str]], user_mess
         f"{system_prompt}\n\n"
         f"Conversation so far:\n{history_text}\n\n"
         f"Student message:\n{user_message}"
+    )
+
+
+def _mock_analyze_turn(student_message: str, tutor_context: dict[str, object]) -> TurnAnalysis:
+    message = student_message.casefold()
+    concept = _context_concept(tutor_context)
+    hint_used = "hint" in message
+    asked_for_confirmation = any(
+        phrase in message
+        for phrase in ("right?", "is this right", "is that right", "is this correct", "am i correct")
+    )
+    transfer = any(phrase in message for phrase in ("new context", "transfer", "real world", "another example"))
+
+    if any(phrase in message for phrase in ("i don't know", "i dont know", "don't know", "dont know")):
+        return TurnAnalysis(
+            concept=concept,
+            answer_quality="dont_know",
+            hint_used=hint_used,
+            transfer=transfer,
+            misconception=None,
+            asked_for_confirmation=asked_for_confirmation,
+        )
+
+    if "switch" in message and ("ip address" in message or "ip addresses" in message):
+        return TurnAnalysis(
+            concept="switching",
+            answer_quality="incorrect",
+            hint_used=hint_used,
+            transfer=transfer,
+            misconception="confuses MAC and IP addressing",
+            asked_for_confirmation=asked_for_confirmation,
+        )
+
+    if any(phrase in message for phrase in ("routing table", "next hop", "destination network")):
+        return TurnAnalysis(
+            concept=concept,
+            answer_quality="correct",
+            hint_used=hint_used,
+            transfer=transfer,
+            misconception=None,
+            asked_for_confirmation=asked_for_confirmation,
+        )
+
+    if any(phrase in message for phrase in ("maybe", "partly", "not fully", "kind of")):
+        return TurnAnalysis(
+            concept=concept,
+            answer_quality="partial",
+            hint_used=hint_used,
+            transfer=transfer,
+            misconception=None,
+            asked_for_confirmation=asked_for_confirmation,
+        )
+
+    return TurnAnalysis(
+        concept=concept,
+        answer_quality="none",
+        hint_used=hint_used,
+        transfer=transfer,
+        misconception=None,
+        asked_for_confirmation=asked_for_confirmation,
+    )
+
+
+def _ask_foundry_for_turn_analysis(student_message: str, tutor_context: dict[str, object]) -> str:
+    settings = get_settings()
+    if not settings.azure_ai_project_endpoint:
+        raise ValueError("AZURE_AI_PROJECT_ENDPOINT is required when ATLAS_LLM_MODE=foundry.")
+
+    from azure.ai.projects import AIProjectClient
+    from azure.identity import DefaultAzureCredential
+
+    project = AIProjectClient(
+        endpoint=settings.azure_ai_project_endpoint,
+        credential=DefaultAzureCredential(),
+    )
+    openai_client = project.get_openai_client(agent_name=settings.azure_ai_agent_name)
+    conversation = openai_client.conversations.create()
+    response = openai_client.responses.create(
+        conversation=conversation.id,
+        input=_turn_analysis_prompt(student_message, tutor_context),
+    )
+    return response.output_text
+
+
+def _turn_analysis_prompt(student_message: str, tutor_context: dict[str, object]) -> str:
+    return (
+        "Analyze this student turn for observable learning signals only. "
+        "Return JSON only, with exactly these keys: concept, answer_quality, hint_used, "
+        "transfer, misconception, asked_for_confirmation. "
+        "answer_quality must be one of: correct, partial, incorrect, dont_know, none. "
+        "misconception must be a string or null. Do not diagnose psychological or medical states.\n\n"
+        f"Context JSON:\n{json.dumps(tutor_context, ensure_ascii=True)}\n\n"
+        f"Student message:\n{student_message}"
+    )
+
+
+def _context_concept(tutor_context: dict[str, object]) -> str:
+    topic = tutor_context.get("topic") or tutor_context.get("current_topic")
+    return str(topic or "current topic").strip().lower()
+
+
+def _empty_turn_analysis(tutor_context: dict[str, object]) -> TurnAnalysis:
+    return TurnAnalysis(
+        concept=_context_concept(tutor_context),
+        answer_quality="none",
+        hint_used=False,
+        transfer=False,
+        misconception=None,
+        asked_for_confirmation=False,
     )

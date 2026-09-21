@@ -3,12 +3,15 @@
 from sqlalchemy.orm import Session
 
 from app.database.repositories.chat_repository import get_student_sessions
+from app.database.repositories.learning_event_repository import get_recent_learning_events
 from app.database.repositories.student_repository import (
     create_student as create_student_record,
     get_student_with_state,
     update_student as update_student_record,
 )
-from app.schemas.progress import ProgressRead
+from app.engine.mastery import mastery_band_label
+from app.engine.next_activity import recommend_next_activity
+from app.schemas.progress import LearningEventRead, NextActivityRead, ProgressRead
 from app.schemas.student import (
     CurrentLearning,
     SessionRead,
@@ -78,11 +81,33 @@ def get_student_progress(db: Session, student_id: str) -> ProgressRead | None:
     return ProgressRead(
         student_id=student.student_id,
         mastery=state.mastery,
+        mastery_band=mastery_band_label(state.mastery),
         confidence=state.confidence,
         adaptability=state.adaptability,
         pace=state.pace,
         concept_scores=state.concept_scores,
+        recent_learning_events=[
+            LearningEventRead.model_validate(event, from_attributes=True)
+            for event in get_recent_learning_events(db, student)
+        ],
     )
+
+
+def get_student_next_activity(db: Session, student_id: str) -> NextActivityRead | None:
+    student = get_student_with_state(db, student_id)
+    if student is None or student.learning_state is None:
+        return None
+
+    state = student.learning_state
+    recommendation = recommend_next_activity(
+        {
+            "topic": student.topic,
+            "mastery": state.mastery,
+            "concept_scores": state.concept_scores,
+            "mistakes": state.mistakes,
+        }
+    )
+    return NextActivityRead(**recommendation)
 
 
 def _student_to_read(student) -> StudentRead:

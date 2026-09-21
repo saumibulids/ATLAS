@@ -4,11 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_db
-from app.schemas.progress import ProgressRead
+from app.schemas.progress import NextActivityRead, ProgressRead
 from app.schemas.student import SessionRead, StudentCreate, StudentPatch, StudentRead
 from app.services.student_service import (
     create_student_profile,
     get_student_profile,
+    get_student_next_activity,
     get_student_progress,
     list_student_sessions,
     update_student_profile,
@@ -56,3 +57,14 @@ def read_student_progress(student_id: str, db: Session = Depends(get_db)) -> Pro
     if progress is None:
         raise HTTPException(status_code=404, detail="Student not found")
     return progress
+
+
+@router.get("/{student_id}/next-activity", response_model=NextActivityRead)
+def read_student_next_activity(
+    student_id: str,
+    db: Session = Depends(get_db),
+) -> NextActivityRead:
+    recommendation = get_student_next_activity(db, student_id)
+    if recommendation is None:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return recommendation

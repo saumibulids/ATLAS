@@ -19,6 +19,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def import_models() -> None:
+    from app.models.learning_event import LearningEvent  # noqa: F401
     from app.models.learning_state import LearningState  # noqa: F401
     from app.models.session import Message, Session  # noqa: F401
     from app.models.student import Student  # noqa: F401
