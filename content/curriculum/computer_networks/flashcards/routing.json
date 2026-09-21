@@ -1,0 +1,10 @@
+[
+  {"source_id": "routing-card-1", "topic_slug": "routing", "concept_slug": "routing-table", "front": "What table does a router check to forward an IP packet?", "back": "The routing table.", "misconception_tag": "confuses routing table with MAC table"},
+  {"source_id": "routing-card-2", "topic_slug": "routing", "concept_slug": "next-hop", "front": "What is a next hop?", "back": "The next router or gateway a packet is sent to.", "misconception_tag": "misunderstands next hop"},
+  {"source_id": "routing-card-3", "topic_slug": "routing", "concept_slug": "routing-table", "front": "Which packet field is used for route lookup?", "back": "The destination IP address.", "misconception_tag": "confuses routing with switching"},
+  {"source_id": "routing-card-4", "topic_slug": "routing", "concept_slug": "routing-table", "front": "What is a default route used for?", "back": "It provides a path when no more specific route matches.", "misconception_tag": null},
+  {"source_id": "routing-card-5", "topic_slug": "routing", "concept_slug": "routing-table", "front": "What is longest-prefix match?", "back": "Choosing the most specific matching route.", "misconception_tag": "ignores longest-prefix match"},
+  {"source_id": "routing-card-6", "topic_slug": "routing", "concept_slug": "next-hop", "front": "Can the next hop be the final destination?", "back": "Yes, if the destination is directly reachable.", "misconception_tag": null},
+  {"source_id": "routing-card-7", "topic_slug": "routing", "concept_slug": "routing-table", "front": "What happens if no route and no default route match?", "back": "The router drops the packet.", "misconception_tag": null},
+  {"source_id": "routing-card-8", "topic_slug": "routing", "concept_slug": "routing-table", "front": "What does a route entry usually include?", "back": "A destination network and next-hop or outgoing interface.", "misconception_tag": null}
+]

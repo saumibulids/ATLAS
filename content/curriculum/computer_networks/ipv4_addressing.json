@@ -1,0 +1,38 @@
+{
+  "title": "IPv4 Addressing",
+  "slug": "ipv4-addressing",
+  "summary": "IPv4 addressing identifies hosts and networks using 32-bit addresses.",
+  "concepts": [
+    {
+      "name": "IPv4 address",
+      "slug": "ipv4-address",
+      "description": "An IPv4 address is a 32-bit logical address written in dotted decimal form."
+    },
+    {
+      "name": "Subnet mask",
+      "slug": "subnet-mask",
+      "description": "A subnet mask separates the network part from the host part of an IPv4 address."
+    }
+  ],
+  "notes": {
+    "overview": "IPv4 addresses help devices identify source and destination hosts across IP networks.",
+    "core_concept": "An IPv4 address has a network portion and a host portion.",
+    "explanation": "The subnet mask tells which bits describe the network and which bits identify the host.",
+    "example": "In 192.168.1.10/24, 192.168.1.0 is the network and .10 identifies a host in that network.",
+    "common_mistake": {
+      "content": "A common mistake is treating the subnet mask as the device address; it only describes the network boundary.",
+      "misconception": "confuses subnet mask with host address"
+    },
+    "quick_check": {
+      "content": "Check the role of the subnet mask.",
+      "question": "What does /24 tell you in an IPv4 address?",
+      "answer": "The first 24 bits are the network portion."
+    },
+    "practice_prompt": "Identify the network portion of 10.0.5.20/24.",
+    "simple_explanation": "An IPv4 address is like a house address, and the subnet tells which neighborhood it belongs to.",
+    "analogy": "The network part is the street name, while the host part is the house number.",
+    "advanced_example": "CIDR notation lets networks use flexible prefix lengths like /26 or /30.",
+    "edge_case": "The first and last addresses in many IPv4 subnets are reserved for network and broadcast use.",
+    "challenge_question": "How many usable host addresses are available in a /30 IPv4 subnet?"
+  }
+}

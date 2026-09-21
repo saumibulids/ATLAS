@@ -1,0 +1,10 @@
+[
+  {"source_id": "arp-card-1", "topic_slug": "arp", "concept_slug": "arp-request", "front": "What does ARP map?", "back": "An IPv4 address to a MAC address on the local network.", "misconception_tag": "confuses ARP with DNS"},
+  {"source_id": "arp-card-2", "topic_slug": "arp", "concept_slug": "arp-request", "front": "Is an ARP request broadcast or unicast?", "back": "Broadcast.", "misconception_tag": "thinks ARP request is unicast"},
+  {"source_id": "arp-card-3", "topic_slug": "arp", "concept_slug": "arp-reply", "front": "What does an ARP reply provide?", "back": "The requested MAC address.", "misconception_tag": "confuses ARP reply value"},
+  {"source_id": "arp-card-4", "topic_slug": "arp", "concept_slug": "arp-request", "front": "Does ARP work across the internet?", "back": "No, ARP works on the local link.", "misconception_tag": "thinks ARP works across networks"},
+  {"source_id": "arp-card-5", "topic_slug": "arp", "concept_slug": "arp-reply", "front": "Why does a host ARP for the default gateway?", "back": "To get the gateway MAC for traffic leaving the local subnet.", "misconception_tag": "thinks ARP finds remote host MAC addresses"},
+  {"source_id": "arp-card-6", "topic_slug": "arp", "concept_slug": "arp-request", "front": "What is stored in an ARP cache?", "back": "Recently learned IPv4-to-MAC mappings.", "misconception_tag": null},
+  {"source_id": "arp-card-7", "topic_slug": "arp", "concept_slug": "arp-request", "front": "What happens if no ARP reply arrives?", "back": "The host cannot build the Ethernet frame for that local next hop.", "misconception_tag": null},
+  {"source_id": "arp-card-8", "topic_slug": "arp", "concept_slug": "arp-reply", "front": "Which protocol is ARP tied to in this course?", "back": "IPv4 on a local Ethernet network.", "misconception_tag": null}
+]

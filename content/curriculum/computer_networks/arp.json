@@ -1,0 +1,38 @@
+{
+  "title": "ARP",
+  "slug": "arp",
+  "summary": "ARP maps IPv4 addresses to MAC addresses inside a local network.",
+  "concepts": [
+    {
+      "name": "ARP request",
+      "slug": "arp-request",
+      "description": "An ARP request asks who owns a specific IPv4 address on the local network."
+    },
+    {
+      "name": "ARP reply",
+      "slug": "arp-reply",
+      "description": "An ARP reply provides the MAC address for the requested IPv4 address."
+    }
+  ],
+  "notes": {
+    "overview": "ARP helps a device find the local MAC address needed to send an IPv4 packet on Ethernet.",
+    "core_concept": "ARP maps an IPv4 address to a MAC address within the same local network.",
+    "explanation": "A host broadcasts an ARP request, and the device with that IPv4 address replies with its MAC address.",
+    "example": "Before sending to 192.168.1.20 on the LAN, a laptop may ask who has that IP address.",
+    "common_mistake": {
+      "content": "A common mistake is expecting ARP to work across the internet; ARP works only on the local link.",
+      "misconception": "thinks ARP works across networks"
+    },
+    "quick_check": {
+      "content": "Check what ARP resolves.",
+      "question": "What does ARP find for an IPv4 address?",
+      "answer": "The matching MAC address on the local network."
+    },
+    "practice_prompt": "Describe the two messages involved in resolving an IPv4 address with ARP.",
+    "simple_explanation": "ARP is like asking everyone in the room who has a certain name tag.",
+    "analogy": "The ARP cache is like a small contact list of recently found local devices.",
+    "advanced_example": "A host usually sends packets for remote networks to the default gateway MAC address, not the remote host MAC.",
+    "edge_case": "If no ARP reply arrives, the host cannot build the Ethernet frame for that local next hop.",
+    "challenge_question": "Why does a host ARP for the default gateway when the destination IP is outside the local subnet?"
+  }
+}

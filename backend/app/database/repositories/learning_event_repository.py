@@ -11,7 +11,7 @@ def create_learning_event(
     db: Session,
     *,
     student_id: int,
-    session_id: int,
+    session_id: int | None,
     concept: str,
     answer_quality: str,
     mastery_before: float,

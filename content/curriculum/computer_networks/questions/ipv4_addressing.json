@@ -1,0 +1,79 @@
+[
+  {
+    "source_id": "ipv4-mcq-1",
+    "type": "mcq",
+    "topic_slug": "ipv4-addressing",
+    "concept_slug": "subnet-mask",
+    "difficulty": 1,
+    "prompt": "What does a subnet mask identify in an IPv4 address?",
+    "options": ["Network and host portions", "Only the MAC address", "Only the DNS name", "Cable type"],
+    "correct_answer": "Network and host portions",
+    "hint": "The mask separates two parts of the address.",
+    "explanation": "A subnet mask separates the network portion from the host portion of an IPv4 address.",
+    "misconception_tags": {
+      "only the mac address": "confuses subnet mask with MAC address"
+    }
+  },
+  {
+    "source_id": "ipv4-true-false-1",
+    "type": "true_false",
+    "topic_slug": "ipv4-addressing",
+    "concept_slug": "ipv4-address",
+    "difficulty": 1,
+    "prompt": "True or false: IPv4 addresses are commonly written in dotted decimal notation.",
+    "options": ["true", "false"],
+    "correct_answer": "true",
+    "hint": "Example: 192.168.1.10.",
+    "explanation": "IPv4 addresses are commonly written as four decimal octets separated by dots.",
+    "misconception_tags": {
+      "false": "does not recognize IPv4 dotted decimal"
+    }
+  },
+  {
+    "source_id": "ipv4-fill-1",
+    "type": "fill_blank",
+    "topic_slug": "ipv4-addressing",
+    "concept_slug": "subnet-mask",
+    "difficulty": 2,
+    "prompt": "In CIDR notation, /24 means the first 24 bits are the ____ portion.",
+    "options": [],
+    "correct_answer": "network",
+    "hint": "The prefix length counts network bits.",
+    "explanation": "/24 means the first 24 bits identify the network portion.",
+    "misconception_tags": {
+      "host": "confuses network and host portions"
+    }
+  },
+  {
+    "source_id": "ipv4-numerical-1",
+    "type": "numerical",
+    "topic_slug": "ipv4-addressing",
+    "concept_slug": "subnet-mask",
+    "difficulty": 2,
+    "prompt": "How many bits are in an IPv4 address?",
+    "options": [],
+    "correct_answer": "32",
+    "numerical_tolerance": 0.0,
+    "hint": "IPv4 uses four 8-bit octets.",
+    "explanation": "IPv4 addresses are 32 bits long.",
+    "misconception_tags": {
+      "128": "confuses IPv4 with IPv6"
+    }
+  },
+  {
+    "source_id": "ipv4-short-1",
+    "type": "short_answer",
+    "topic_slug": "ipv4-addressing",
+    "concept_slug": "subnet-mask",
+    "difficulty": 3,
+    "prompt": "What is the purpose of CIDR prefix length such as /26?",
+    "options": [],
+    "correct_answer": "It tells how many leading bits are the network portion of the address.",
+    "keywords": ["network", "bits"],
+    "hint": "A prefix length counts leading network bits.",
+    "explanation": "CIDR prefix length identifies how many leading bits belong to the network portion.",
+    "misconception_tags": {
+      "host number": "confuses prefix length with host address"
+    }
+  }
+]

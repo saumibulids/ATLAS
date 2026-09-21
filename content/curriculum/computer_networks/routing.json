@@ -1,0 +1,38 @@
+{
+  "title": "Routing",
+  "slug": "routing",
+  "summary": "Routing explains how packets move between different networks.",
+  "concepts": [
+    {
+      "name": "Routing table",
+      "slug": "routing-table",
+      "description": "Routers choose paths using entries in a routing table."
+    },
+    {
+      "name": "Next hop",
+      "slug": "next-hop",
+      "description": "The next hop is the next router or gateway a packet should be sent to."
+    }
+  ],
+  "notes": {
+    "overview": "Routing moves IP packets from one network to another until they reach the destination network.",
+    "core_concept": "A router uses the destination IP address and its routing table to choose the next hop.",
+    "explanation": "The router compares the destination IP with known network routes and selects the best matching route.",
+    "example": "If a laptop sends data to a website, the home router forwards the packet toward the ISP as the next hop.",
+    "common_mistake": {
+      "content": "A common mistake is confusing a routing table with a switch MAC table; routers use network routes, not port-to-MAC mappings.",
+      "misconception": "confuses routing table with MAC table"
+    },
+    "quick_check": {
+      "content": "Check what routing decisions are based on.",
+      "question": "What field does a router inspect to choose a route?",
+      "answer": "The destination IP address."
+    },
+    "practice_prompt": "Explain how a router chooses a next hop for a packet going to another network.",
+    "simple_explanation": "Routing is like choosing roads on a map to reach another city.",
+    "analogy": "The routing table is like a road sign that points toward the next place to go.",
+    "advanced_example": "With longest-prefix match, a more specific route is chosen over a broader default route.",
+    "edge_case": "If no matching route exists and no default route is configured, the router drops the packet.",
+    "challenge_question": "Why should a router prefer a /24 route over a /16 route when both match?"
+  }
+}

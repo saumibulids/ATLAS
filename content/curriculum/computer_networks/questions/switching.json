@@ -1,0 +1,77 @@
+[
+  {
+    "source_id": "switching-mcq-1",
+    "type": "mcq",
+    "topic_slug": "switching",
+    "concept_slug": "mac-address-forwarding",
+    "difficulty": 1,
+    "prompt": "Which address does a Layer 2 switch primarily use to forward Ethernet frames?",
+    "options": ["MAC address", "IP address", "Port number", "URL"],
+    "correct_answer": "MAC address",
+    "hint": "Think about Layer 2 addressing.",
+    "explanation": "A Layer 2 switch forwards frames using destination MAC addresses.",
+    "misconception_tags": {
+      "ip address": "confuses MAC and IP addressing"
+    }
+  },
+  {
+    "source_id": "switching-true-false-1",
+    "type": "true_false",
+    "topic_slug": "switching",
+    "concept_slug": "mac-address-table",
+    "difficulty": 1,
+    "prompt": "True or false: A switch learns source MAC addresses from frames it receives.",
+    "options": ["true", "false"],
+    "correct_answer": "true",
+    "hint": "A switch updates its table when frames arrive.",
+    "explanation": "Switches learn which MAC address is reachable on which port by reading source MAC addresses.",
+    "misconception_tags": {
+      "false": "thinks switches do not learn MAC addresses"
+    }
+  },
+  {
+    "source_id": "switching-fill-1",
+    "type": "fill_blank",
+    "topic_slug": "switching",
+    "concept_slug": "mac-address-table",
+    "difficulty": 2,
+    "prompt": "A switch stores learned MAC-to-port mappings in a MAC address ____.",
+    "options": [],
+    "correct_answer": "table",
+    "hint": "It is often called the MAC address table.",
+    "explanation": "The MAC address table maps MAC addresses to switch ports.",
+    "misconception_tags": {
+      "routing table": "confuses switching table with routing table"
+    }
+  },
+  {
+    "source_id": "switching-numerical-1",
+    "type": "numerical",
+    "topic_slug": "switching",
+    "concept_slug": "mac-address-forwarding",
+    "difficulty": 2,
+    "prompt": "A switch has learned 4 unique source MAC addresses. How many MAC table entries does it have?",
+    "options": [],
+    "correct_answer": "4",
+    "numerical_tolerance": 0.0,
+    "hint": "Each unique learned MAC address creates one entry.",
+    "explanation": "Four unique learned MAC addresses create four MAC address table entries.",
+    "misconception_tags": {}
+  },
+  {
+    "source_id": "switching-short-1",
+    "type": "short_answer",
+    "topic_slug": "switching",
+    "concept_slug": "mac-address-forwarding",
+    "difficulty": 3,
+    "prompt": "What does a switch do when the destination MAC address is unknown?",
+    "options": [],
+    "correct_answer": "It floods the frame out other ports in the VLAN except the incoming port.",
+    "keywords": ["flood", "ports"],
+    "hint": "The switch has not learned where that MAC address lives yet.",
+    "explanation": "For an unknown unicast, a switch floods the frame out other ports in the same VLAN.",
+    "misconception_tags": {
+      "drop it": "thinks switches drop unknown unicasts"
+    }
+  }
+]

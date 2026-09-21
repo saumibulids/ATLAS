@@ -190,3 +190,56 @@ def _empty_turn_analysis(tutor_context: dict[str, object]) -> TurnAnalysis:
         misconception=None,
         asked_for_confirmation=False,
     )
+
+
+def grade_short_answer_with_model(
+    *,
+    student_answer: str,
+    correct_answer: str,
+    keywords: list[str],
+) -> bool | None:
+    settings = get_settings()
+    if settings.atlas_llm_mode.lower() != "foundry":
+        return None
+    try:
+        raw_response = _ask_foundry_for_short_answer_grade(
+            student_answer=student_answer,
+            correct_answer=correct_answer,
+            keywords=keywords,
+        )
+        data = json.loads(raw_response)
+        return bool(data["correct"])
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return None
+
+
+def _ask_foundry_for_short_answer_grade(
+    *,
+    student_answer: str,
+    correct_answer: str,
+    keywords: list[str],
+) -> str:
+    settings = get_settings()
+    if not settings.azure_ai_project_endpoint:
+        raise ValueError("AZURE_AI_PROJECT_ENDPOINT is required when ATLAS_LLM_MODE=foundry.")
+
+    from azure.ai.projects import AIProjectClient
+    from azure.identity import DefaultAzureCredential
+
+    project = AIProjectClient(
+        endpoint=settings.azure_ai_project_endpoint,
+        credential=DefaultAzureCredential(),
+    )
+    openai_client = project.get_openai_client(agent_name=settings.azure_ai_agent_name)
+    conversation = openai_client.conversations.create()
+    response = openai_client.responses.create(
+        conversation=conversation.id,
+        input=(
+            "Grade this short answer. Return JSON only as {\"correct\": true|false}. "
+            "Use the expected answer and keywords, and do not include any diagnosis or extra text.\n\n"
+            f"Expected answer: {correct_answer}\n"
+            f"Keywords: {json.dumps(keywords, ensure_ascii=True)}\n"
+            f"Student answer: {student_answer}"
+        ),
+    )
+    return response.output_text

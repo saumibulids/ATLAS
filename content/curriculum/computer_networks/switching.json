@@ -1,0 +1,38 @@
+{
+  "title": "Switching",
+  "slug": "switching",
+  "summary": "Switching explains how devices on a local network send frames to the right destination.",
+  "concepts": [
+    {
+      "name": "MAC address forwarding",
+      "slug": "mac-address-forwarding",
+      "description": "Switches use destination MAC addresses to forward Ethernet frames."
+    },
+    {
+      "name": "MAC address table",
+      "slug": "mac-address-table",
+      "description": "A switch learns which MAC addresses are reachable through each port."
+    }
+  ],
+  "notes": {
+    "overview": "Switching lets devices in the same local network communicate efficiently without sending every frame everywhere.",
+    "core_concept": "A Layer 2 switch forwards Ethernet frames using MAC addresses.",
+    "explanation": "When a frame arrives, the switch checks the destination MAC address and looks it up in its MAC address table.",
+    "example": "If Computer A sends a frame to Computer B, the switch forwards it only to the port where B is connected.",
+    "common_mistake": {
+      "content": "A common mistake is thinking a switch primarily uses IP addresses; Layer 2 switching uses MAC addresses.",
+      "misconception": "confuses MAC and IP addressing"
+    },
+    "quick_check": {
+      "content": "Check the forwarding field used by a switch.",
+      "question": "Which address does a Layer 2 switch use to forward frames?",
+      "answer": "The destination MAC address."
+    },
+    "practice_prompt": "Describe what a switch does when it receives a frame with a known destination MAC address.",
+    "simple_explanation": "A switch is like a classroom monitor who knows which desk each student sits at.",
+    "analogy": "The MAC address table is like a seating chart for devices connected to switch ports.",
+    "advanced_example": "If the destination MAC is unknown, the switch floods the frame out other ports in the VLAN.",
+    "edge_case": "Broadcast frames are forwarded to all ports in the broadcast domain except the incoming port.",
+    "challenge_question": "Why does a switch flood an unknown unicast frame instead of dropping it?"
+  }
+}

@@ -1,0 +1,77 @@
+[
+  {
+    "source_id": "routing-mcq-1",
+    "type": "mcq",
+    "topic_slug": "routing",
+    "concept_slug": "routing-table",
+    "difficulty": 1,
+    "prompt": "What does a router use to choose where to send a packet next?",
+    "options": ["Routing table", "MAC address table", "ARP cache", "DNS record"],
+    "correct_answer": "Routing table",
+    "hint": "Routers make Layer 3 path decisions.",
+    "explanation": "A router checks its routing table to choose the next hop for an IP packet.",
+    "misconception_tags": {
+      "mac address table": "confuses routing table with MAC table"
+    }
+  },
+  {
+    "source_id": "routing-true-false-1",
+    "type": "true_false",
+    "topic_slug": "routing",
+    "concept_slug": "next-hop",
+    "difficulty": 1,
+    "prompt": "True or false: The next hop is the next device a router sends the packet to.",
+    "options": ["true", "false"],
+    "correct_answer": "true",
+    "hint": "Think of the next step on a path.",
+    "explanation": "The next hop is the next router or gateway on the path toward the destination.",
+    "misconception_tags": {
+      "false": "misunderstands next hop"
+    }
+  },
+  {
+    "source_id": "routing-fill-1",
+    "type": "fill_blank",
+    "topic_slug": "routing",
+    "concept_slug": "routing-table",
+    "difficulty": 2,
+    "prompt": "Routers inspect the destination ____ address to select a route.",
+    "options": [],
+    "correct_answer": "IP",
+    "hint": "Routing is a Layer 3 process.",
+    "explanation": "Routers choose routes using the destination IP address.",
+    "misconception_tags": {
+      "mac": "confuses routing with switching"
+    }
+  },
+  {
+    "source_id": "routing-numerical-1",
+    "type": "numerical",
+    "topic_slug": "routing",
+    "concept_slug": "routing-table",
+    "difficulty": 2,
+    "prompt": "A router has 3 specific routes and 1 default route. How many total route entries are described?",
+    "options": [],
+    "correct_answer": "4",
+    "numerical_tolerance": 0.0,
+    "hint": "Add the specific routes and the default route.",
+    "explanation": "Three specific routes plus one default route equals four route entries.",
+    "misconception_tags": {}
+  },
+  {
+    "source_id": "routing-short-1",
+    "type": "short_answer",
+    "topic_slug": "routing",
+    "concept_slug": "routing-table",
+    "difficulty": 3,
+    "prompt": "Why does a router prefer a more specific route when two routes match?",
+    "options": [],
+    "correct_answer": "The more specific route has the longest prefix match and points more precisely to the destination network.",
+    "keywords": ["longest", "prefix"],
+    "hint": "Think about which route matches more destination bits.",
+    "explanation": "Routers use longest-prefix match so the most specific matching route wins.",
+    "misconception_tags": {
+      "lowest metric only": "ignores longest-prefix match"
+    }
+  }
+]

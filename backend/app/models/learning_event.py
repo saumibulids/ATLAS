@@ -13,7 +13,7 @@ class LearningEvent(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     student_id: Mapped[int] = mapped_column(ForeignKey("students.id"), index=True)
-    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), index=True)
+    session_id: Mapped[int | None] = mapped_column(ForeignKey("sessions.id"), index=True, nullable=True)
     concept: Mapped[str] = mapped_column(String(255), index=True)
     answer_quality: Mapped[str] = mapped_column(String(32))
     mastery_before: Mapped[float] = mapped_column(Float)

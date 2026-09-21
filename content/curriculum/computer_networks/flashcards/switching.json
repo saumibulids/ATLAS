@@ -1,0 +1,10 @@
+[
+  {"source_id": "switching-card-1", "topic_slug": "switching", "concept_slug": "mac-address-forwarding", "front": "Which address does a Layer 2 switch use to forward frames?", "back": "The destination MAC address.", "misconception_tag": "confuses MAC and IP addressing"},
+  {"source_id": "switching-card-2", "topic_slug": "switching", "concept_slug": "mac-address-table", "front": "What does a MAC address table store?", "back": "MAC addresses mapped to switch ports.", "misconception_tag": null},
+  {"source_id": "switching-card-3", "topic_slug": "switching", "concept_slug": "mac-address-table", "front": "How does a switch learn MAC addresses?", "back": "It reads source MAC addresses from incoming frames.", "misconception_tag": "thinks switches do not learn MAC addresses"},
+  {"source_id": "switching-card-4", "topic_slug": "switching", "concept_slug": "mac-address-forwarding", "front": "What happens to an unknown unicast frame?", "back": "The switch floods it out other ports in the VLAN.", "misconception_tag": "thinks switches drop unknown unicasts"},
+  {"source_id": "switching-card-5", "topic_slug": "switching", "concept_slug": "mac-address-forwarding", "front": "What layer is basic Ethernet switching associated with?", "back": "Layer 2, the data link layer.", "misconception_tag": null},
+  {"source_id": "switching-card-6", "topic_slug": "switching", "concept_slug": "mac-address-table", "front": "What is another name for the switch forwarding table?", "back": "The MAC address table.", "misconception_tag": "confuses switching table with routing table"},
+  {"source_id": "switching-card-7", "topic_slug": "switching", "concept_slug": "mac-address-forwarding", "front": "Does a switch forward known unicast frames to every port?", "back": "No, it forwards them only to the learned destination port.", "misconception_tag": null},
+  {"source_id": "switching-card-8", "topic_slug": "switching", "concept_slug": "mac-address-forwarding", "front": "What does a switch do with broadcast frames?", "back": "It forwards them to all ports in the broadcast domain except the incoming port.", "misconception_tag": null}
+]

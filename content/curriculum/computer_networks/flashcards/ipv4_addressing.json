@@ -1,0 +1,10 @@
+[
+  {"source_id": "ipv4-card-1", "topic_slug": "ipv4-addressing", "concept_slug": "ipv4-address", "front": "How many bits are in an IPv4 address?", "back": "32 bits.", "misconception_tag": "confuses IPv4 with IPv6"},
+  {"source_id": "ipv4-card-2", "topic_slug": "ipv4-addressing", "concept_slug": "ipv4-address", "front": "How is IPv4 commonly written?", "back": "In dotted decimal notation, such as 192.168.1.10.", "misconception_tag": "does not recognize IPv4 dotted decimal"},
+  {"source_id": "ipv4-card-3", "topic_slug": "ipv4-addressing", "concept_slug": "subnet-mask", "front": "What does a subnet mask separate?", "back": "The network portion and host portion.", "misconception_tag": "confuses network and host portions"},
+  {"source_id": "ipv4-card-4", "topic_slug": "ipv4-addressing", "concept_slug": "subnet-mask", "front": "What does /24 mean?", "back": "The first 24 bits are the network portion.", "misconception_tag": null},
+  {"source_id": "ipv4-card-5", "topic_slug": "ipv4-addressing", "concept_slug": "subnet-mask", "front": "Is a subnet mask the device's address?", "back": "No, it describes the network boundary.", "misconception_tag": "confuses subnet mask with host address"},
+  {"source_id": "ipv4-card-6", "topic_slug": "ipv4-addressing", "concept_slug": "ipv4-address", "front": "What are the four numbers in dotted decimal called?", "back": "Octets.", "misconception_tag": null},
+  {"source_id": "ipv4-card-7", "topic_slug": "ipv4-addressing", "concept_slug": "subnet-mask", "front": "What is CIDR notation?", "back": "A slash prefix length that shows network bits, such as /26.", "misconception_tag": "confuses prefix length with host address"},
+  {"source_id": "ipv4-card-8", "topic_slug": "ipv4-addressing", "concept_slug": "ipv4-address", "front": "What does the host portion identify?", "back": "A specific device interface within the network.", "misconception_tag": null}
+]

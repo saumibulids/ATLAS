@@ -1,0 +1,77 @@
+[
+  {
+    "source_id": "arp-mcq-1",
+    "type": "mcq",
+    "topic_slug": "arp",
+    "concept_slug": "arp-request",
+    "difficulty": 1,
+    "prompt": "What does ARP resolve on a local network?",
+    "options": ["IPv4 address to MAC address", "Domain name to IP address", "MAC address to URL", "Port number to process"],
+    "correct_answer": "IPv4 address to MAC address",
+    "hint": "ARP connects Layer 3 addressing to Layer 2 delivery.",
+    "explanation": "ARP maps a local IPv4 address to the MAC address needed for Ethernet delivery.",
+    "misconception_tags": {
+      "domain name to ip address": "confuses ARP with DNS"
+    }
+  },
+  {
+    "source_id": "arp-true-false-1",
+    "type": "true_false",
+    "topic_slug": "arp",
+    "concept_slug": "arp-request",
+    "difficulty": 1,
+    "prompt": "True or false: ARP requests are broadcast on the local network.",
+    "options": ["true", "false"],
+    "correct_answer": "true",
+    "hint": "The sender does not yet know the target MAC address.",
+    "explanation": "ARP requests are broadcast so the device with the target IPv4 address can reply.",
+    "misconception_tags": {
+      "false": "thinks ARP request is unicast"
+    }
+  },
+  {
+    "source_id": "arp-fill-1",
+    "type": "fill_blank",
+    "topic_slug": "arp",
+    "concept_slug": "arp-reply",
+    "difficulty": 2,
+    "prompt": "An ARP reply provides the requested ____ address.",
+    "options": [],
+    "correct_answer": "MAC",
+    "hint": "The reply gives the Layer 2 address.",
+    "explanation": "An ARP reply contains the MAC address for the requested IPv4 address.",
+    "misconception_tags": {
+      "ip": "confuses ARP reply value"
+    }
+  },
+  {
+    "source_id": "arp-numerical-1",
+    "type": "numerical",
+    "topic_slug": "arp",
+    "concept_slug": "arp-request",
+    "difficulty": 2,
+    "prompt": "If one host needs MAC addresses for 3 local IPv4 addresses, how many ARP resolutions may it perform?",
+    "options": [],
+    "correct_answer": "3",
+    "numerical_tolerance": 0.0,
+    "hint": "Each unknown local IPv4 address may need its own resolution.",
+    "explanation": "Three unknown local IPv4 addresses may require three ARP resolutions.",
+    "misconception_tags": {}
+  },
+  {
+    "source_id": "arp-short-1",
+    "type": "short_answer",
+    "topic_slug": "arp",
+    "concept_slug": "arp-reply",
+    "difficulty": 3,
+    "prompt": "Why does a host ARP for the default gateway when the destination is outside the local subnet?",
+    "options": [],
+    "correct_answer": "The packet must be sent to the gateway on the local network, so the host needs the gateway MAC address.",
+    "keywords": ["gateway", "mac"],
+    "hint": "The remote host is not directly reachable at Layer 2.",
+    "explanation": "For remote destinations, the host sends the Ethernet frame to the default gateway's MAC address.",
+    "misconception_tags": {
+      "remote mac": "thinks ARP finds remote host MAC addresses"
+    }
+  }
+]
