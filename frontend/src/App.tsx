@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
 import { DeskDock } from './components/DeskDock';
@@ -11,29 +11,43 @@ import { FocusModeView } from './components/FocusModeView';
 import { TactileMemoryCanvasModal } from './components/TactileMemoryCanvasModal';
 import { SettingsModal } from './components/SettingsModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
-import { 
-  INITIAL_USER, 
-  INITIAL_FLASHCARDS, 
-  INITIAL_NOTES 
+import {
+  INITIAL_USER,
+  INITIAL_FLASHCARDS,
+  INITIAL_NOTES,
 } from './data/mockData';
 import { NavigationTab, Flashcard, NoteItem, UserProfile } from './types';
-import { 
-  loadStoredUser, 
-  saveStoredUser, 
-  loadStoredFlashcards, 
-  saveStoredFlashcards, 
-  loadStoredNotes, 
+import {
+  loadStoredUser,
+  saveStoredUser,
+  loadStoredFlashcards,
+  saveStoredFlashcards,
+  loadStoredNotes,
   saveStoredNotes,
   loadStoredSettings,
   saveStoredSettings,
-  DeskSettings
+  DeskSettings,
 } from './utils/storage';
 import { playClick, playChime } from './utils/audio';
+import {
+  STUDENT_ID,
+  getHealth,
+  getStudent,
+  getGamification,
+  getAchievements,
+  type BackendConnection,
+} from './services/api';
+import type {
+  AchievementStateRead,
+  GamificationAward,
+  GamificationProfileRead,
+  StudentRead,
+} from './services/apiTypes';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<NavigationTab>('dashboard');
-  
-  // Persistent State initialization
+
+  // Persistent State initialization (UI fallback data — the backend owns XP/mastery).
   const [user, setUser] = useState<UserProfile>(() => loadStoredUser());
   const [flashcards, setFlashcards] = useState<Flashcard[]>(() => loadStoredFlashcards());
   const [notes, setNotes] = useState<NoteItem[]>(() => loadStoredNotes());
@@ -45,6 +59,12 @@ export default function App() {
   const [dotGridEnabled, setDotGridEnabled] = useState(settings.dotGridEnabled);
   const [activeMarker, setActiveMarker] = useState(settings.activeMarker);
   const [soundEnabled, setSoundEnabled] = useState(settings.soundEnabled);
+
+  // Backend connection + server-owned learning state.
+  const [backendStatus, setBackendStatus] = useState<BackendConnection>('checking');
+  const [student, setStudent] = useState<StudentRead | null>(null);
+  const [gamification, setGamification] = useState<GamificationProfileRead | null>(null);
+  const [achievements, setAchievements] = useState<AchievementStateRead[]>([]);
 
   // Modals & Navigation
   const [isCanvasOpen, setIsCanvasOpen] = useState(false);
@@ -73,20 +93,63 @@ export default function App() {
     });
   }, [dotGridEnabled, activeMarker, soundEnabled, currentSubject]);
 
-  const handleAddXp = (amount: number) => {
-    if (soundEnabled) playChime('medium');
-    setUser((prev) => ({
-      ...prev,
-      totalXp: prev.totalXp + amount,
-    }));
-  };
+  // ── Backend data loading ────────────────────────────────────────────────────────
+  const refreshGamification = useCallback(async () => {
+    try {
+      setGamification(await getGamification(STUDENT_ID));
+    } catch {
+      // Backend unreachable — keep the last known state.
+    }
+    try {
+      setAchievements(await getAchievements(STUDENT_ID));
+    } catch {
+      // ignore
+    }
+    try {
+      setStudent(await getStudent(STUDENT_ID));
+    } catch {
+      // ignore
+    }
+  }, []);
 
-  const handleAddMinutes = (minutes: number) => {
-    setUser((prev) => ({
-      ...prev,
-      dailySpentMinutes: Math.min(prev.dailyGoalMinutes, prev.dailySpentMinutes + minutes),
-    }));
-  };
+  const loadBackendData = useCallback(async () => {
+    const [healthRes, studentRes, gamificationRes, achievementRes] = await Promise.allSettled([
+      getHealth(),
+      getStudent(STUDENT_ID),
+      getGamification(STUDENT_ID),
+      getAchievements(STUDENT_ID),
+    ]);
+    setBackendStatus(healthRes.status === 'fulfilled' ? 'online' : 'offline');
+    if (studentRes.status === 'fulfilled') setStudent(studentRes.value);
+    if (gamificationRes.status === 'fulfilled') setGamification(gamificationRes.value);
+    if (achievementRes.status === 'fulfilled') setAchievements(achievementRes.value);
+  }, []);
+
+  useEffect(() => {
+    loadBackendData();
+  }, [loadBackendData]);
+
+  /**
+   * Backend-endpoint actions return the authoritative gamification award.
+   * The backend decides XP, levels, streaks, and badges — the frontend only
+   * reflects the result.
+   */
+  const handleGamification = useCallback(
+    (award: GamificationAward | null) => {
+      if (award && award.xp_awarded > 0) {
+        if (soundEnabled) playChime(award.level_up ? 'high' : 'medium');
+      }
+      refreshGamification();
+    },
+    [soundEnabled, refreshGamification]
+  );
+
+  // Kept for local-only UI actions (add note/card) — refetches the real score
+  // rather than inventing XP client-side.
+  const handleAddXp = useCallback(() => {
+    if (soundEnabled) playChime('medium');
+    refreshGamification();
+  }, [soundEnabled, refreshGamification]);
 
   const handleUpdateGoal = (mins: number) => {
     setUser((prev) => ({
@@ -96,12 +159,13 @@ export default function App() {
   };
 
   const handleUpdateProfile = (name: string, grade: string) => {
-    const initials = name
-      .split(' ')
-      .filter(Boolean)
-      .map((w) => w[0].toUpperCase())
-      .slice(0, 2)
-      .join('') || 'SC';
+    const initials =
+      name
+        .split(' ')
+        .filter(Boolean)
+        .map((w) => w[0].toUpperCase())
+        .slice(0, 2)
+        .join('') || 'SC';
 
     setUser((prev) => ({
       ...prev,
@@ -117,7 +181,11 @@ export default function App() {
     setNotes(INITIAL_NOTES);
   };
 
-  const handleImportData = (imported: { user: UserProfile; flashcards: Flashcard[]; notes: NoteItem[] }) => {
+  const handleImportData = (imported: {
+    user: UserProfile;
+    flashcards: Flashcard[];
+    notes: NoteItem[];
+  }) => {
     setUser(imported.user);
     setFlashcards(imported.flashcards);
     setNotes(imported.notes);
@@ -170,10 +238,7 @@ export default function App() {
   const handleExportNotes = () => {
     if (soundEnabled) playClick();
     const textData = notes
-      .map(
-        (n) =>
-          `# ${n.title} (${n.timestamp})\nTags: ${n.tags.join(', ')}\n\n${n.content}\n`
-      )
+      .map((n) => `# ${n.title} (${n.timestamp})\nTags: ${n.tags.join(', ')}\n\n${n.content}\n`)
       .join('\n---\n\n');
 
     const blob = new Blob([textData], { type: 'text/markdown' });
@@ -184,6 +249,18 @@ export default function App() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  // XP/streak/daily-goal displays come from the backend gamification profile
+  // when available; the local profile is only a fallback.
+  const displayUser: UserProfile = gamification
+    ? {
+        ...user,
+        totalXp: gamification.xp,
+        streakDays: gamification.streak.current,
+        dailySpentMinutes: gamification.daily_goal.progress.focus ?? user.dailySpentMinutes,
+        dailyGoalMinutes: gamification.daily_goal.targets.focus ?? user.dailyGoalMinutes,
+      }
+    : user;
 
   return (
     <div
@@ -198,7 +275,7 @@ export default function App() {
       <Sidebar
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
-        user={user}
+        user={displayUser}
         onOpenSettings={() => setIsSettingsOpen(true)}
         isMobileOpen={isMobileNavOpen}
         onCloseMobile={() => setIsMobileNavOpen(false)}
@@ -208,7 +285,9 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
         <TopHeader
-          user={user}
+          user={displayUser}
+          backendStatus={backendStatus}
+          gamification={gamification}
           currentSubject={currentSubject}
           onSelectSubject={setCurrentSubject}
           onOpenSettings={() => setIsSettingsOpen(true)}
@@ -219,7 +298,12 @@ export default function App() {
         <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 md:py-8 overflow-y-auto">
           {currentTab === 'dashboard' && (
             <DashboardView
-              user={user}
+              user={displayUser}
+              studentId={STUDENT_ID}
+              student={student}
+              gamification={gamification}
+              achievements={achievements}
+              backendStatus={backendStatus}
               currentSubject={currentSubject}
               flashcards={flashcards}
               notes={notes}
@@ -230,27 +314,25 @@ export default function App() {
 
           {currentTab === 'ai-tutor' && (
             <AiTutorView
-              user={user}
+              user={displayUser}
               currentSubject={currentSubject}
               onNavigate={setCurrentTab}
               onAddXp={handleAddXp}
+              onGamification={handleGamification}
               onAddNote={handleAddNote}
               onAddFlashcard={handleAddFlashcard}
             />
           )}
 
           {currentTab === 'cascading-notes' && (
-            <NotesView
-              notes={notes}
-              onAddNote={handleAddNote}
-              onDeleteNote={handleDeleteNote}
-            />
+            <NotesView notes={notes} onAddNote={handleAddNote} onDeleteNote={handleDeleteNote} />
           )}
 
           {currentTab === 'flashcards' && (
             <FlashcardsView
               cards={flashcards}
               onAddXp={handleAddXp}
+              onGamification={handleGamification}
               onAddCard={handleAddFlashcard}
               onDeleteCard={handleDeleteFlashcard}
               currentSubject={currentSubject}
@@ -258,17 +340,11 @@ export default function App() {
           )}
 
           {currentTab === 'quizzes' && (
-            <QuizView
-              onAddXp={handleAddXp}
-              currentSubject={currentSubject}
-            />
+            <QuizView onAddXp={handleAddXp} onGamification={handleGamification} currentSubject={currentSubject} />
           )}
 
           {currentTab === 'focus-mode' && (
-            <FocusModeView
-              onAddMinutes={handleAddMinutes}
-              onAddXp={handleAddXp}
-            />
+            <FocusModeView onGamification={handleGamification} backendStatus={backendStatus} />
           )}
         </main>
       </div>

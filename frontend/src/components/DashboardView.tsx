@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
   Target, 
@@ -19,14 +19,30 @@ import {
   BarChart2, 
   Feather, 
   Eye, 
-  Check
+  Check,
+  Loader2,
+  Trophy,
+  Route
 } from 'lucide-react';
 import { NavigationTab, UserProfile, Flashcard, NoteItem } from '../types';
 import { playClick } from '../utils/audio';
+import { STUDENT_ID, getStudentProgress, getStudentNextActivity, type BackendConnection } from '../services/api';
+import type {
+  AchievementStateRead,
+  GamificationProfileRead,
+  NextActivityRead,
+  ProgressRead,
+  StudentRead,
+} from '../services/apiTypes';
 
 interface DashboardViewProps {
   user: UserProfile;
   currentSubject: string;
+  studentId: string;
+  student?: StudentRead | null;
+  gamification?: GamificationProfileRead | null;
+  achievements?: AchievementStateRead[];
+  backendStatus?: BackendConnection;
   flashcards: Flashcard[];
   notes: NoteItem[];
   onNavigate: (tab: NavigationTab) => void;
@@ -36,12 +52,43 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({
   user,
   currentSubject,
+  studentId = STUDENT_ID,
+  student,
+  gamification = null,
+  achievements = [],
+  backendStatus = 'checking',
   flashcards,
   notes,
   onNavigate,
   onOpenCanvas,
 }) => {
   const [blueprintSaved, setBlueprintSaved] = useState(false);
+
+  // Backend-owned learning snapshot (mastery, confidence, next activity).
+  const [progress, setProgress] = useState<ProgressRead | null>(null);
+  const [nextActivity, setNextActivity] = useState<NextActivityRead | null>(null);
+  const [progressLoading, setProgressLoading] = useState(true);
+  const [progressError, setProgressError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setProgressLoading(true);
+    setProgressError(null);
+    Promise.allSettled([getStudentProgress(studentId), getStudentNextActivity(studentId)]).then(
+      ([p, n]) => {
+        if (cancelled) return;
+        if (p.status === 'fulfilled') setProgress(p.value);
+        if (n.status === 'fulfilled') setNextActivity(n.value);
+        if (p.status === 'rejected' && n.status === 'rejected') {
+          setProgressError("Couldn't load your progress. Please try again.");
+        }
+        setProgressLoading(false);
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId]);
 
   const subjectTitle = currentSubject.includes(':') 
     ? currentSubject.split(':')[1].trim() 
@@ -50,11 +97,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     ? currentSubject.split(':')[0].trim() 
     : 'Active Curriculum';
 
-  // Calculate mastery dynamically from flashcard count and XP
-  const calculatedMastery = Math.min(
-    96,
-    Math.max(35, Math.round(30 + (flashcards.length * 4) + (user.totalXp > 0 ? 15 : 0)))
-  );
+  // Mastery is computed by the backend — the frontend only displays it.
+  const displayMastery = progress ? Math.round(progress.mastery * 100) : null;
+  const displayMasteryBand = progress?.mastery_band ?? null;
 
   const latestCard = flashcards[0];
   const latestNote = notes[0];
@@ -178,7 +223,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="flex items-center gap-3 mt-2 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#EBF5FB] text-[#203F9A] border border-[#94C2DA]/50">
                   <span className="w-2 h-2 rounded-full bg-[#203F9A]" />
-                  {calculatedMastery}% Proficient Mastery
+                  {progressLoading ? 'Loading…' : `${displayMastery ?? '—'}% Mastery`}
+                  {displayMasteryBand && <span className="text-[#4E7CB2] font-semibold">· {displayMasteryBand}</span>}
                 </span>
                 <span className="text-xs text-[#757683] font-medium">
                   {flashcards.length} Flashcards • {notes.length} Desk Sheets
@@ -194,15 +240,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="space-y-2 pt-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-[#1E1B17]">Progress Milestones</span>
-                <span className="font-bold text-[#203F9A]">Phase {Math.min(4, Math.max(1, Math.ceil(calculatedMastery / 25)))} of 4 Active</span>
+                <span className="font-bold text-[#203F9A]">Phase {displayMastery ? Math.min(4, Math.max(1, Math.ceil(displayMastery / 25))) : 1} of 4 Active</span>
               </div>
 
               {/* Segmented bar */}
               <div className="grid grid-cols-4 gap-2">
                 <div className="h-2 rounded-full bg-[#203F9A]" />
-                <div className={`h-2 rounded-full ${calculatedMastery >= 50 ? 'bg-[#203F9A]' : 'bg-[#EFE8E0] border border-[#4E7CB2]/20'}`} />
-                <div className={`h-2 rounded-full ${calculatedMastery >= 75 ? 'bg-[#203F9A]' : 'bg-[#EFE8E0] border border-[#4E7CB2]/20'}`} />
-                <div className={`h-2 rounded-full ${calculatedMastery >= 90 ? 'bg-[#203F9A]' : 'bg-[#EFE8E0] border border-[#4E7CB2]/20'}`} />
+                <div className={`h-2 rounded-full ${(displayMastery ?? 0) >= 50 ? 'bg-[#203F9A]' : 'bg-[#EFE8E0] border border-[#4E7CB2]/20'}`} />
+                <div className={`h-2 rounded-full ${(displayMastery ?? 0) >= 75 ? 'bg-[#203F9A]' : 'bg-[#EFE8E0] border border-[#4E7CB2]/20'}`} />
+                <div className={`h-2 rounded-full ${(displayMastery ?? 0) >= 90 ? 'bg-[#203F9A]' : 'bg-[#EFE8E0] border border-[#4E7CB2]/20'}`} />
               </div>
 
               {/* Labels */}
@@ -211,15 +257,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <CheckCircle2 className="w-3 h-3" />
                   <span>1. Foundations</span>
                 </div>
-                <div className={`flex items-center gap-1 ${calculatedMastery >= 50 ? 'text-[#203F9A]' : 'text-[#757683]'}`}>
+                <div className={`flex items-center gap-1 ${(displayMastery ?? 0) >= 50 ? 'text-[#203F9A]' : 'text-[#757683]'}`}>
                   <CheckCircle2 className="w-3 h-3" />
                   <span>2. Drill Analysis</span>
                 </div>
-                <div className={`flex items-center gap-1 font-bold ${calculatedMastery >= 75 ? 'text-[#203F9A]' : 'text-[#757683]'}`}>
+                <div className={`flex items-center gap-1 font-bold ${(displayMastery ?? 0) >= 75 ? 'text-[#203F9A]' : 'text-[#757683]'}`}>
                   <Flag className="w-3 h-3 fill-current" />
                   <span>3. Deep Spec</span>
                 </div>
-                <div className={`${calculatedMastery >= 90 ? 'text-[#203F9A]' : 'text-[#757683]'}`}>
+                <div className={`${(displayMastery ?? 0) >= 90 ? 'text-[#203F9A]' : 'text-[#757683]'}`}>
                   <span>4. Exam Mastery</span>
                 </div>
               </div>
@@ -359,6 +405,147 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ATLAS Learning Snapshot — all values computed by the backend */}
+      <div className="paper-card rounded-2xl p-6 space-y-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <BarChart2 className="w-4 h-4 text-[#203F9A]" />
+            <h3 className="font-bold text-base text-[#1E1B17]">ATLAS Learning Snapshot</h3>
+          </div>
+          {backendStatus === 'offline' && (
+            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#FDF1F0] text-[#7F1D1D] border border-[#DC2626]/30">
+              Backend offline
+            </span>
+          )}
+        </div>
+
+        {progressLoading && (
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#757683]">
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading your progress…
+          </div>
+        )}
+
+        {progressError && (
+          <div className="rounded-xl bg-[#FDF1F0] border border-[#DC2626]/30 text-[#7F1D1D] text-xs font-semibold px-4 py-3">
+            {progressError}
+          </div>
+        )}
+
+        {!progressLoading && !progressError && progress && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+              <div className="rounded-xl bg-[#EBF5FB] p-3 border border-[#94C2DA]/40">
+                <div className="text-[10px] font-bold text-[#4E7CB2] uppercase tracking-wider">Mastery</div>
+                <div className="text-xl font-black text-[#203F9A]">{Math.round(progress.mastery * 100)}%</div>
+                <div className="text-[10px] font-bold text-[#4E7CB2]">{progress.mastery_band}</div>
+              </div>
+              <div className="rounded-xl bg-white p-3 border border-[#4E7CB2]/15">
+                <div className="text-[10px] font-bold text-[#757683] uppercase tracking-wider">Confidence</div>
+                <div className="text-xl font-black text-[#1E1B17]">{Math.round(progress.confidence * 100)}%</div>
+              </div>
+              <div className="rounded-xl bg-white p-3 border border-[#4E7CB2]/15">
+                <div className="text-[10px] font-bold text-[#757683] uppercase tracking-wider">Adaptability</div>
+                <div className="text-xl font-black text-[#1E1B17]">{Math.round(progress.adaptability * 100)}%</div>
+              </div>
+              <div className="rounded-xl bg-white p-3 border border-[#4E7CB2]/15">
+                <div className="text-[10px] font-bold text-[#757683] uppercase tracking-wider">Pace</div>
+                <div className="text-xl font-black capitalize text-[#1E1B17]">{progress.pace}</div>
+              </div>
+              <div className="rounded-xl bg-[#FFF8E1] p-3 border border-[#F59E0B]/30">
+                <div className="text-[10px] font-bold text-[#757683] uppercase tracking-wider">XP / Level</div>
+                <div className="text-xl font-black text-amber-700">
+                  {gamification ? gamification.xp.toLocaleString() : '—'}
+                </div>
+                {gamification && (
+                  <div className="text-[10px] font-bold text-[#78350F]">
+                    Level {gamification.level} · {gamification.xp_to_next_level} XP to next
+                  </div>
+                )}
+              </div>
+              <div className="rounded-xl bg-[#FFF0F7] p-3 border border-[#E7A0CC]/40">
+                <div className="text-[10px] font-bold text-[#757683] uppercase tracking-wider">Streak</div>
+                <div className="text-xl font-black text-[#E84797]">
+                  {gamification ? gamification.streak.current : '—'}d
+                </div>
+                {gamification && (
+                  <div className="text-[10px] font-bold text-[#63003A]">longest {gamification.streak.longest}d</div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Concept scores */}
+              <div className="rounded-xl bg-[#FAF2EA]/70 p-4 border border-[#4E7CB2]/15">
+                <div className="text-xs font-bold text-[#444652] mb-2">Concept mastery</div>
+                {Object.entries(progress.concept_scores).length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(progress.concept_scores).map(([concept, score]) => (
+                      <span
+                        key={concept}
+                        className="px-2.5 py-1 rounded-full bg-white border border-[#4E7CB2]/20 text-[11px] font-bold text-[#203F9A]"
+                      >
+                        {concept.replace(/_/g, ' ')} · {Math.round(score * 100)}%
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-[#757683]">No learning activity yet.</div>
+                )}
+              </div>
+
+              {/* Next activity */}
+              <div className="rounded-xl bg-[#EBF5FB] p-4 border border-[#94C2DA]/40">
+                <div className="text-xs font-bold text-[#203F9A] mb-1 flex items-center gap-1.5">
+                  <Route className="w-3.5 h-3.5" /> Next suggested activity
+                </div>
+                {nextActivity ? (
+                  <div className="text-xs text-[#1E1B17]">
+                    <span className="font-black capitalize">{nextActivity.activity}</span> on{' '}
+                    <span className="font-bold">{nextActivity.topic.replace(/_/g, ' ')}</span>
+                    <div className="text-[#444652] mt-1">{nextActivity.reason}</div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-[#757683]">No learning activity yet.</div>
+                )}
+              </div>
+            </div>
+
+            {/* Achievements / badges */}
+            <div>
+              <div className="text-xs font-bold text-[#444652] mb-2 flex items-center gap-1.5">
+                <Trophy className="w-3.5 h-3.5 text-[#203F9A]" /> Achievements
+              </div>
+              {achievements.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {achievements.map((a) => (
+                    <span
+                      key={a.id}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                        a.unlocked
+                          ? 'bg-[#EAF7EF] border-[#16A34A]/40 text-emerald-800'
+                          : 'bg-[#FAF2EA] border-[#4E7CB2]/20 text-[#757683]'
+                      }`}
+                      title={a.criteria}
+                    >
+                      {a.unlocked ? '✓ ' : '🔒 '}
+                      {a.name}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-[#757683]">No achievements yet — keep studying!</div>
+              )}
+            </div>
+          </>
+        )}
+
+        {!progressLoading && !progressError && !progress && (
+          <div className="rounded-xl bg-[#FAF2EA] border border-[#4E7CB2]/20 text-[#757683] text-xs font-semibold px-4 py-3">
+            No learning activity yet. Start a tutoring session to build your progress snapshot.
+          </div>
+        )}
       </div>
 
       {/* Pinned Desk Memos & Micro-Tasks */}
@@ -569,7 +756,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 }}
                 className="text-xs font-bold text-white bg-[#203F9A] px-3 py-1 rounded-full flex items-center gap-1 cursor-pointer"
               >
-                <span>{calculatedMastery}% Active</span>
+                <span>{displayMastery === null ? '—' : `${displayMastery}%`} Active</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>

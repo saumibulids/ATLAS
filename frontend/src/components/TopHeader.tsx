@@ -15,11 +15,15 @@ import { SUBJECTS } from '../data/mockData';
 import { PWAInstallButton } from './PWAInstallButton';
 import { playClick } from '../utils/audio';
 import { Plus } from 'lucide-react';
+import type { BackendConnection } from '../services/api';
+import type { GamificationProfileRead } from '../services/apiTypes';
 
 interface TopHeaderProps {
   user: UserProfile;
   currentSubject: string;
   subjects?: string[];
+  backendStatus?: BackendConnection;
+  gamification?: GamificationProfileRead | null;
   onSelectSubject: (subject: string) => void;
   onAddSubject?: (subject: string) => void;
   onOpenSettings: () => void;
@@ -35,6 +39,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
     'AP Physics C: Electricity, Magnetism & Circuits',
     'AP Calculus BC: Series & Taylor Approximations',
   ],
+  backendStatus = 'checking',
+  gamification = null,
   onSelectSubject,
   onAddSubject,
   onOpenSettings,
@@ -168,6 +174,41 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         {/* PWA Install Button in Header */}
         <div className="hidden sm:block">
           <PWAInstallButton variant="compact" />
+        </div>
+
+        {/* Backend Connectivity */}
+        <div
+          title={
+            backendStatus === 'online'
+              ? 'Connected to the ATLAS backend'
+              : backendStatus === 'offline'
+                ? 'ATLAS backend unreachable — start it with: uvicorn app.main:app --reload'
+                : 'Checking ATLAS backend connection…'
+          }
+          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold shadow-2xs ${
+            backendStatus === 'online'
+              ? 'bg-[#EAF7EF] border-[#16A34A]/40 text-[#14532D]'
+              : backendStatus === 'offline'
+                ? 'bg-[#FDF1F0] border-[#DC2626]/40 text-[#7F1D1D]'
+                : 'bg-white/80 border-[#4E7CB2]/25 text-[#757683]'
+          }`}
+        >
+          <span
+            className={`w-2 h-2 rounded-full ${
+              backendStatus === 'online'
+                ? 'bg-emerald-500'
+                : backendStatus === 'offline'
+                  ? 'bg-red-500'
+                  : 'bg-amber-400 animate-pulse'
+            }`}
+          />
+          <span>
+            {backendStatus === 'online'
+              ? `Backend online${gamification ? ` · Lv ${gamification.level}` : ''}`
+              : backendStatus === 'offline'
+                ? 'Backend offline'
+                : 'Connecting…'}
+          </span>
         </div>
 
         {/* Streak */}

@@ -146,3 +146,68 @@ Content: Computer Networks only (arp, ipv4_addressing, routing, switching).
 5. **API contract drift** — 9 endpoints exist but are undocumented in `docs/API_CONTRACT.md`; assessment submit response contains an undocumented `gamification` field; flashcard-review response block is misplaced.
 6. **Stub files look done but are empty** — `progress.py`, `feedback.py`, `parent.py` routes; `feedback_service.py`; `feedback.py` model; `ingest_curriculum.py`; `core/security.py`. Easy to mistake for implemented (`focus.py`, `focus_service.py`, `focus_session.py` are now implemented in Phase 6a/6b).
 7. Git history shows commits through `phase 6b` for Phases 1–6 (`initial setup` → `phase 6b`), so the phases 1–6 claims in this report match the commit trail.
+
+---
+
+## Frontend ↔ Backend Integration (Phase 1 UI wiring)
+
+Connected the React/Vite frontend (`/frontend`) to the FastAPI backend over HTTP/JSON.
+Backend untouched except for this report — no backend code changed; the backend remains
+the sole owner of mastery, XP, streaks, grading, and focus timing.
+
+**New frontend files**
+
+- `frontend/src/services/apiTypes.ts` — TypeScript types mirroring the backend schemas
+  (`docs/API_CONTRACT.md`, `backend/app/schemas/*`), field names kept verbatim.
+- `frontend/src/services/api.ts` — the single typed API client. Base URL from
+  `VITE_API_BASE_URL` (default `http://localhost:8000`), student id from
+  `VITE_STUDENT_ID` (default `S001`). Friendly `ApiError` with the backend's `detail`
+  message; no raw stack traces surfaced.
+
+**Endpoints now used by the UI**
+
+- Health / student / gamification / achievements — loaded on app mount (`App.tsx`);
+  `refreshGamification()` runs after any action the backend awards XP for.
+- Chat — `AiTutorView` now calls `POST /api/chat` (subject prefix + seeded topic
+  `routing`); reply and `student_state` (mastery/confidence) are displayed and the
+  backend's `gamification` award is reflected. Explanation-mode toggles stay visual.
+- Focus — `FocusModeView` reworked to be backend-driven: `POST /api/focus/start`
+  (single 25m or Pomodoro 25/5×4), `GET /api/focus/{id}` polled every second
+  (`remaining_seconds` is the only clock), `visibilitychange` → `interrupt`/`resume`,
+  `break/start` + `break/end` for Pomodoro, `complete` for the XP/result. The former
+  client-side `setInterval` timer is gone.
+- Focus analytics — `FocusAnalyticsView` section loaded from
+  `GET /api/students/{id}/focus/analytics` (sessions, active minutes, interruptions,
+  time-by-topic, recent sessions).
+- Flashcards — `FlashcardsView` loads the personalized deck from
+  `GET /api/students/{id}/flashcards?topic=routing&size=8` and posts ratings
+  (`didnt_know|almost|knew_it|easy`) to `POST /api/flashcards/{id}/review`; the backend
+  schedules the next review and awards XP. Local add/AI-generate remain as dev fallbacks.
+- Quiz — `QuizView` gained a backend drill: `POST /api/assessments` (create) and
+  `POST /api/assessments/{id}/submit` (grading). Score summary, mastery before/after,
+  `mastery_band`, next-activity suggestion, and XP are shown from the backend response.
+- Dashboard — `DashboardView` fetches `GET /api/students/{id}/progress` and
+  `/next-activity`; the client-side `calculatedMastery` was removed. `TopHeader`
+  shows a backend-connectivity pill plus backend level. XP/streak/daily-goal displays
+  are derived from the gamification profile, not computed locally.
+
+**Config**
+
+- `frontend/.env.example` — added `VITE_API_BASE_URL` and `VITE_STUDENT_ID`; a local
+  gitignored `frontend/.env` with the same safe values enables out-of-the-box dev.
+- CORS already allows `http://localhost:3000` (backend default), so no backend change.
+
+**Verification**
+
+- Backend: `python -m pytest` from `backend/` — 83 passed.
+- Frontend: `npm run lint` (`tsc --noEmit`) clean; `npm run build` succeeds.
+- Smoke test: backend on :8000 + frontend on :3000 run together; health, chat, focus
+  start/state/complete, and focus analytics all respond.
+
+**Not wired (no backend endpoint — documented in the UI as fallback/dev-only)**
+
+- Notes (`GET /topics/{topic_id}/notes` exists for curriculum notes, but desk-memo
+  notes stay local in localStorage).
+- AI-generated flashcards/quizzes (Express mock `/api/generate-*`, dev only).
+- Real Foundry content: with `ATLAS_LLM_MODE=mock` the backend returns canned tutor
+  replies; real Foundry authentication remains the pending dependency for live chat.

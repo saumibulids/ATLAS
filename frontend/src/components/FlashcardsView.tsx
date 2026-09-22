@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Layers, 
   RotateCcw, 
@@ -14,10 +14,13 @@ import {
 } from 'lucide-react';
 import { Flashcard } from '../types';
 import { playClick, playChime } from '../utils/audio';
+import { getFlashcards, reviewFlashcard, STUDENT_ID } from '../services/api';
+import type { FlashcardRating, FlashcardRead, GamificationAward } from '../services/apiTypes';
 
 interface FlashcardsViewProps {
   cards: Flashcard[];
   onAddXp: (amount: number) => void;
+  onGamification?: (award: GamificationAward | null) => void;
   onAddCard: (question: string, answer: string, category: string) => void;
   onDeleteCard?: (id: string) => void;
   currentSubject?: string;
@@ -26,6 +29,7 @@ interface FlashcardsViewProps {
 export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
   cards,
   onAddXp,
+  onGamification,
   onAddCard,
   onDeleteCard,
   currentSubject = 'Computer Networks',
@@ -42,10 +46,51 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiSuccessMsg, setAiSuccessMsg] = useState<string | null>(null);
 
+  // Backend revision queue (GET /api/students/{id}/flashcards)
+  const [backendCards, setBackendCards] = useState<FlashcardRead[]>([]);
+  const [deckLoading, setDeckLoading] = useState(true);
+  const [deckError, setDeckError] = useState<string | null>(null);
+  const [reviewingId, setReviewingId] = useState<number | null>(null);
+
   // Manual Form
   const [newQ, setNewQ] = useState('');
   const [newA, setNewA] = useState('');
   const [newCategory, setNewCategory] = useState(currentSubject);
+
+  const loadBackendDeck = () => {
+    setDeckLoading(true);
+    setDeckError(null);
+    getFlashcards('routing', 8, STUDENT_ID)
+      .then((deck) => {
+        setBackendCards(deck.cards);
+        setDeckLoading(false);
+      })
+      .catch(() => {
+        setBackendCards([]);
+        setDeckError("Couldn't load your revision deck. Please try again.");
+        setDeckLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    loadBackendDeck();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleBackendReview = async (flashcardId: number, rating: FlashcardRating) => {
+    playChime(rating === 'easy' || rating === 'knew_it' ? 'high' : 'medium');
+    setReviewingId(flashcardId);
+    try {
+      const res = await reviewFlashcard(flashcardId, rating, STUDENT_ID);
+      if (onGamification) onGamification(res.gamification ?? null);
+      // Refresh the deck so due/next-review state reflects the backend schedule.
+      loadBackendDeck();
+    } catch (err) {
+      console.warn('Flashcard review failed:', err);
+    } finally {
+      setReviewingId(null);
+    }
+  };
 
   // Filtered cards
   const filteredCards = selectedCategory === 'All' 
@@ -134,6 +179,82 @@ export const FlashcardsView: React.FC<FlashcardsViewProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-24">
+      {/* Backend Revision Queue (ATLAS spaced repetition from the backend) */}
+      <div className="paper-card rounded-2xl p-6 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EBF5FB] border border-[#94C2Da]/60 text-xs font-bold text-[#203F9A] mb-1">
+              <Layers className="w-3.5 h-3.5" />
+              <span>ATLAS Spaced-Repetition Deck</span>
+            </div>
+            <h3 className="font-bold text-lg text-[#1E1B17]">
+              Due Now from the Backend {!deckLoading && !deckError && backendCards.length > 0 && `(${backendCards.length})`}
+            </h3>
+            <p className="text-xs text-[#4E7CB2]">
+              Ratings sync to the backend — it schedules the next review and awards XP.
+            </p>
+          </div>
+        </div>
+
+        {deckLoading && (
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#757683]">
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading your revision deck…
+          </div>
+        )}
+
+        {deckError && (
+          <div className="rounded-xl bg-[#FDF1F0] border border-[#DC2626]/30 text-[#7F1D1D] text-xs font-semibold px-4 py-3">
+            {deckError}
+          </div>
+        )}
+
+        {!deckLoading && !deckError && backendCards.length === 0 && (
+          <div className="rounded-xl bg-[#FAF2EA] border border-[#4E7CB2]/20 text-[#757683] text-xs font-semibold px-4 py-3">
+            No learning activity yet. Your scheduled revision cards will appear here once the backend builds your deck.
+          </div>
+        )}
+
+        {!deckLoading && !deckError && backendCards.length > 0 && (
+          <div className="space-y-3">
+            {backendCards.map((card) => (
+              <div
+                key={card.id}
+                className="rounded-xl bg-white border border-[#4E7CB2]/15 p-4 space-y-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-sm font-bold text-[#1E1B17]">{card.front}</div>
+                  <span className="shrink-0 px-2 py-0.5 rounded-full bg-[#FAF2EA] border border-[#4E7CB2]/20 text-[10px] font-bold text-[#444652]">
+                    {card.concept_slug.replace(/_/g, ' ')}
+                  </span>
+                </div>
+                <div className="text-xs text-[#444652] whitespace-pre-line bg-[#FAF2EA]/50 p-3 rounded-lg border border-[#4E7CB2]/10">
+                  {card.back}
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {(
+                    [
+                      { label: 'Didn\'t know', rating: 'didnt_know' as const, cls: 'bg-[#FFF0F7] border-[#E7A0CC] text-[#E84797]' },
+                      { label: 'Almost', rating: 'almost' as const, cls: 'bg-[#FAF2EA] border-[#4E7CB2]/25 text-[#444652]' },
+                      { label: 'Knew it', rating: 'knew_it' as const, cls: 'bg-[#EBF5FB] border-[#94C2DA] text-[#203F9A]' },
+                      { label: 'Easy', rating: 'easy' as const, cls: 'bg-[#EAF7EF] border-emerald-300 text-emerald-800' },
+                    ]
+                  ).map((opt) => (
+                    <button
+                      key={opt.rating}
+                      onClick={() => handleBackendReview(card.id, opt.rating)}
+                      disabled={reviewingId === card.id}
+                      className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold hover:opacity-80 transition-all cursor-pointer disabled:opacity-50 ${opt.cls}`}
+                    >
+                      {reviewingId === card.id ? 'Saving…' : opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

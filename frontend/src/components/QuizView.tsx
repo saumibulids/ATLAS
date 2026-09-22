@@ -18,22 +18,32 @@ import confetti from 'canvas-confetti';
 import { QuizQuestion } from '../types';
 import { QUIZ_TRACKS, QuizTrack } from '../data/mockData';
 import { playClick, playChime } from '../utils/audio';
-import { 
-  loadStoredQuizHistory, 
-  saveStoredQuizHistory, 
+import {
+  loadStoredQuizHistory,
+  saveStoredQuizHistory,
   QuizAttemptRecord,
   loadStoredQuizTracks,
-  saveStoredQuizTracks 
+  saveStoredQuizTracks,
 } from '../utils/storage';
+import { createAssessment, submitAssessment, STUDENT_ID, DEFAULT_TOPIC } from '../services/api';
+import type {
+  AssessmentCreateResponse,
+  AssessmentQuestionRead,
+  AssessmentSubmitResponse,
+  GamificationAward,
+  SubmittedAnswer,
+} from '../services/apiTypes';
 
 interface QuizViewProps {
   questions?: QuizQuestion[];
   onAddXp: (amount: number) => void;
+  onGamification?: (award: GamificationAward | null) => void;
   currentSubject?: string;
 }
 
 export const QuizView: React.FC<QuizViewProps> = ({
   onAddXp,
+  onGamification,
   currentSubject = 'Computer Networks',
 }) => {
   const [tracks, setTracks] = useState<QuizTrack[]>(() => loadStoredQuizTracks());
@@ -58,6 +68,17 @@ export const QuizView: React.FC<QuizViewProps> = ({
   const [aiTopic, setAiTopic] = useState(currentSubject);
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+
+  // Backend ATLAS assessment (generation + grading owned by the backend)
+  const [assessmentQuestions, setAssessmentQuestions] = useState<AssessmentQuestionRead[] | null>(null);
+  const [assessmentId, setAssessmentId] = useState<number | null>(null);
+  const [assessmentAnswers, setAssessmentAnswers] = useState<SubmittedAnswer[]>([]);
+  const [assessmentIdx, setAssessmentIdx] = useState(0);
+  const [assessmentSelected, setAssessmentSelected] = useState<string | null>(null);
+  const [assessmentTextInput, setAssessmentTextInput] = useState('');
+  const [assessmentResult, setAssessmentResult] = useState<AssessmentSubmitResponse | null>(null);
+  const [assessmentLoading, setAssessmentLoading] = useState(false);
+  const [assessmentError, setAssessmentError] = useState<string | null>(null);
 
   useEffect(() => {
     setHistory(loadStoredQuizHistory());
@@ -220,8 +241,237 @@ export const QuizView: React.FC<QuizViewProps> = ({
     }
   };
 
+  // ── Backend ATLAS assessment flow ────────────────────────────────────────────
+  const currentAssessmentQuestion = assessmentQuestions?.[assessmentIdx] ?? null;
+
+  const handleStartAssessment = async () => {
+    playClick();
+    setAssessmentError(null);
+    setAssessmentResult(null);
+    setAssessmentLoading(true);
+    try {
+      const created: AssessmentCreateResponse = await createAssessment(DEFAULT_TOPIC, 5, STUDENT_ID);
+      setAssessmentId(created.assessment_id);
+      setAssessmentQuestions(created.questions);
+      setAssessmentAnswers([]);
+      setAssessmentIdx(0);
+      setAssessmentSelected(null);
+      setAssessmentTextInput('');
+    } catch (e) {
+      setAssessmentError(
+        e instanceof Error ? e.message : 'Could not start the assessment. Please try again.'
+      );
+    } finally {
+      setAssessmentLoading(false);
+    }
+  };
+
+  const submitAssessmentNow = async (finalAnswers: SubmittedAnswer[]) => {
+    if (!assessmentId) return;
+    setAssessmentLoading(true);
+    setAssessmentError(null);
+    try {
+      const result = await submitAssessment(assessmentId, finalAnswers);
+      setAssessmentResult(result);
+      if (onGamification) onGamification(result.gamification ?? null);
+      playChime(result.score_summary.percent >= 70 ? 'success' : 'medium');
+    } catch (e) {
+      setAssessmentError(
+        e instanceof Error ? e.message : 'Could not submit the assessment. Please try again.'
+      );
+    } finally {
+      setAssessmentLoading(false);
+    }
+  };
+
+  const handleAssessmentNext = () => {
+    if (!assessmentQuestions || !currentAssessmentQuestion) return;
+    playClick();
+    const answer = (assessmentSelected ?? assessmentTextInput).trim();
+    if (!answer) return;
+    const updated: SubmittedAnswer[] = [
+      ...assessmentAnswers,
+      { question_id: currentAssessmentQuestion.id, answer, hint_used: false, time_seconds: null },
+    ];
+    setAssessmentAnswers(updated);
+    setAssessmentSelected(null);
+    setAssessmentTextInput('');
+    if (assessmentIdx < assessmentQuestions.length - 1) {
+      setAssessmentIdx((i) => i + 1);
+    } else {
+      submitAssessmentNow(updated);
+    }
+  };
+
+  const handleAssessmentSelect = (answer: string) => {
+    if (!currentAssessmentQuestion) return;
+    playClick();
+    setAssessmentSelected(answer);
+  };
+
+  const handleAssessmentReset = () => {
+    playClick();
+    setAssessmentQuestions(null);
+    setAssessmentId(null);
+    setAssessmentAnswers([]);
+    setAssessmentIdx(0);
+    setAssessmentResult(null);
+    setAssessmentSelected(null);
+    setAssessmentTextInput('');
+    setAssessmentError(null);
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-24">
+      {/* ATLAS Backend Assessment — question bank + grading owned by the backend */}
+      <div className="paper-card rounded-2xl p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EBF5FB] border border-[#94C2DA]/60 text-xs font-bold text-[#203F9A] mb-1">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>ATLAS Graded Assessment</span>
+            </div>
+            <h3 className="font-bold text-lg text-[#1E1B17]">Backend Practice Drill</h3>
+            <p className="text-xs text-[#4E7CB2]">
+              Questions are generated by ATLAS; scoring, mastery updates, and XP are all decided by the backend.
+            </p>
+          </div>
+          {!assessmentQuestions && !assessmentResult && (
+            <button
+              onClick={handleStartAssessment}
+              disabled={assessmentLoading}
+              className="tactile-btn-primary px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 self-start sm:self-auto"
+            >
+              {assessmentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              <span>{assessmentLoading ? 'Starting…' : 'Start Drill'}</span>
+            </button>
+          )}
+        </div>
+
+        {assessmentError && (
+          <div className="rounded-xl bg-[#FDF1F0] border border-[#DC2626]/30 text-[#7F1D1D] text-xs font-semibold px-4 py-3">
+            {assessmentError}
+          </div>
+        )}
+
+        {assessmentResult && (
+          <div className="space-y-4">
+            <div
+              className={`rounded-xl border px-4 py-3 text-xs font-semibold ${
+                assessmentResult.score_summary.percent >= 70
+                  ? 'bg-[#EAF7EF] border-[#16A34A]/40 text-[#14532D]'
+                  : 'bg-[#FFF8E1] border-[#F59E0B]/40 text-[#78350F]'
+              }`}
+            >
+              Score: {assessmentResult.score_summary.correct}/{assessmentResult.score_summary.total} (
+              {Math.round(assessmentResult.score_summary.percent * 100)}%) · Mastery{' '}
+              {Math.round(assessmentResult.mastery_before * 100)}% →{' '}
+              {Math.round(assessmentResult.mastery_after * 100)}% ({assessmentResult.mastery_band})
+              {assessmentResult.gamification && assessmentResult.gamification.xp_awarded > 0 && (
+                <div className="mt-1 font-bold">
+                  +{assessmentResult.gamification.xp_awarded} XP · total {assessmentResult.gamification.new_total}
+                  {assessmentResult.gamification.level_up ? ' · Level up!' : ''}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              {assessmentResult.results.map((r) => (
+                <div
+                  key={r.question_id}
+                  className={`rounded-xl border px-3 py-2.5 text-xs ${
+                    r.correct ? 'bg-[#EAF7EF] border-[#16A34A]/25' : 'bg-[#FFF0F7] border-[#E7A0CC]/40'
+                  }`}
+                >
+                  <div className="font-bold text-[#1E1B17] flex items-center gap-1.5">
+                    {r.correct ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <XCircle className="w-3.5 h-3.5 text-[#E84797]" />}
+                    {r.correct ? 'Correct' : 'Incorrect'}
+                  </div>
+                  <div className="text-[#444652] mt-1">{r.explanation}</div>
+                  {r.misconception_tag && (
+                    <div className="text-[11px] font-bold text-[#E84797] mt-1">
+                      Misconception: {r.misconception_tag.replace(/_/g, ' ')}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {assessmentResult.next_activity && (
+              <div className="rounded-xl bg-[#FAF2EA] border border-[#4E7CB2]/20 px-3 py-2.5 text-xs text-[#444652]">
+                <span className="font-bold text-[#203F9A]">Next suggested activity:</span>{' '}
+                {assessmentResult.next_activity.activity} on {assessmentResult.next_activity.topic} —{' '}
+                {assessmentResult.next_activity.reason}
+              </div>
+            )}
+
+            <button
+              onClick={handleAssessmentReset}
+              className="tactile-btn-primary px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Start New Drill</span>
+            </button>
+          </div>
+        )}
+
+        {assessmentQuestions && !assessmentResult && currentAssessmentQuestion && (
+          <div>
+            <div className="flex items-center justify-between text-xs font-bold text-[#757683] mb-2">
+              <span>
+                Question {assessmentIdx + 1} of {assessmentQuestions.length}
+              </span>
+              <span className="text-[#203F9A]">
+                {currentAssessmentQuestion.type.replace(/_/g, ' ')} · difficulty {currentAssessmentQuestion.difficulty}
+              </span>
+            </div>
+            <div className="text-base font-bold text-[#1E1B17] mb-4">{currentAssessmentQuestion.prompt}</div>
+
+            {currentAssessmentQuestion.options.length > 0 ? (
+              <div className="grid gap-2">
+                {currentAssessmentQuestion.options.map((opt, idx) => (
+                  <button
+                    key={`${opt}-${idx}`}
+                    onClick={() => handleAssessmentSelect(opt)}
+                    className={`text-left px-3.5 py-2.5 rounded-xl border text-sm transition-all cursor-pointer ${
+                      assessmentSelected === opt
+                        ? 'bg-[#203F9A] text-white border-[#203F9A] shadow-xs'
+                        : 'bg-white border-[#4E7CB2]/20 text-[#1E1B17] hover:bg-[#FAF2EA]'
+                    }`}
+                  >
+                    <span className="font-bold mr-2">{String.fromCharCode(65 + idx)}.</span>
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={assessmentTextInput}
+                onChange={(e) => setAssessmentTextInput(e.target.value)}
+                placeholder="Type your answer…"
+                className="w-full p-3 rounded-xl border border-[#4E7CB2]/30 bg-white text-sm focus:outline-[#203F9A]"
+              />
+            )}
+
+            <button
+              onClick={handleAssessmentNext}
+              disabled={!assessmentSelected && !assessmentTextInput.trim()}
+              className="tactile-btn-primary mt-4 px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <ArrowRight className="w-4 h-4" />
+              <span>
+                {assessmentLoading
+                  ? 'Submitting…'
+                  : assessmentIdx < assessmentQuestions.length - 1
+                    ? 'Next Question'
+                    : 'Submit Assessment'}
+              </span>
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Header & Track Selector */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

@@ -19,6 +19,8 @@ import {
   Volume2
 } from 'lucide-react';
 import { NavigationTab, UserProfile } from '../types';
+import { postChat, STUDENT_ID, DEFAULT_SUBJECT, DEFAULT_TOPIC } from '../services/api';
+import type { GamificationAward } from '../services/apiTypes';
 
 interface Message {
   id: string;
@@ -36,6 +38,7 @@ interface AiTutorViewProps {
   currentSubject?: string;
   onNavigate: (tab: NavigationTab) => void;
   onAddXp: (amount: number) => void;
+  onGamification?: (award: GamificationAward | null) => void;
   onAddNote: (title: string, content: string) => void;
   onAddFlashcard: (question: string, answer: string) => void;
 }
@@ -45,6 +48,7 @@ export const AiTutorView: React.FC<AiTutorViewProps> = ({
   currentSubject = 'Computer Networks: Transport Layer',
   onNavigate,
   onAddXp,
+  onGamification,
   onAddNote,
   onAddFlashcard,
 }) => {
@@ -188,56 +192,46 @@ export const AiTutorView: React.FC<AiTutorViewProps> = ({
     setCurrentTopic(q.slice(0, 45));
 
     try {
-      const response = await fetch('/api/tutor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: q,
-          subject: currentSubject,
-          mode: activeMode,
-          history: chatMessages.slice(-4).map((m) => ({
-            role: m.role,
-            text: m.text,
-          })),
-        }),
+      const chatSubject = (currentSubject || '').split(':')[0].trim() || DEFAULT_SUBJECT;
+      const data = await postChat({
+        student_id: STUDENT_ID,
+        message: q,
+        subject: chatSubject,
+        topic: DEFAULT_TOPIC,
       });
 
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
+      const masteryPct = Math.round((data.student_state?.mastery ?? 0) * 100);
+      const confidencePct = Math.round((data.student_state?.confidence ?? 0) * 100);
       const tutorReply: Message = {
         id: `tutor-${Date.now()}`,
         role: 'tutor',
         text: data.reply || 'Concept analyzed and structured.',
-        time: data.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         topic: q.length > 40 ? `${q.slice(0, 38)}...` : q,
-        keyTakeaway: `Core Principle: Master the fundamental invariants and edge conditions of ${q.slice(0, 30)}.`,
+        keyTakeaway: `ATLAS mastery ${masteryPct}% · confidence ${confidencePct}%`,
       };
 
       setChatMessages((prev) => [...prev, tutorReply]);
-      onAddXp(12);
+      if (onGamification) onGamification(data.gamification ?? null);
     } catch (err) {
-      console.warn('Falling back to direct intelligent explanation:', err);
-      // Fallback
-      setTimeout(() => {
-        const fallbackText = activeMode === 'analogy'
-          ? `Think of "${q}" like a high-reliability postal routing hub: every parcel must carry verified sender and destination credentials. If an acknowledgment gets dropped along the highway, the hub maintains a timed buffer to guarantee delivery without packet collisions.`
-          : `For "${q}": The primary operational principle involves bounding sequence parameters, validating pre-conditions, and ensuring deterministic state progression across all transitions.`;
+      console.warn('ATLAS backend chat failed:', err);
+      // Honest fallback — never pretend the backend answered. The remaining
+      // dependency is real Foundry authentication in backend/app/agents/.
+      const fallbackText =
+        "I couldn't reach the ATLAS backend. Make sure it's running " +
+        "(uvicorn app.main:app --reload) and real Foundry authentication is configured. " +
+        'My reply will appear here as soon as the connection is restored.';
 
-        const fallbackReply: Message = {
-          id: `tutor-${Date.now()}`,
-          role: 'tutor',
-          text: fallbackText,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          topic: q,
-          keyTakeaway: `Key Takeaway: Bound the parameters and verify all edge failure transitions for "${q}".`,
-        };
+      const fallbackReply: Message = {
+        id: `tutor-${Date.now()}`,
+        role: 'tutor',
+        text: fallbackText,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        topic: q,
+        keyTakeaway: 'Backend connection pending — please try again in a moment.',
+      };
 
-        setChatMessages((prev) => [...prev, fallbackReply]);
-        onAddXp(10);
-      }, 500);
+      setChatMessages((prev) => [...prev, fallbackReply]);
     } finally {
       setIsSubmitting(false);
     }

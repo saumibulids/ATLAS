@@ -17,7 +17,11 @@ class TurnAnalysis(BaseModel):
     asked_for_confirmation: bool
 
 
-def ask_atlas(system_prompt: str, history: list[dict[str, str]], user_message: str) -> str:
+def ask_atlas(
+    system_prompt: str,
+    history: list[dict[str, str]],
+    user_message: str,
+) -> str:
     settings = get_settings()
     mode = settings.atlas_llm_mode.lower()
 
@@ -33,7 +37,9 @@ def ask_atlas(system_prompt: str, history: list[dict[str, str]], user_message: s
         raise ValueError("ATLAS_LLM_MODE must be either 'mock' or 'foundry'.")
 
     if not settings.azure_ai_project_endpoint:
-        raise ValueError("AZURE_AI_PROJECT_ENDPOINT is required when ATLAS_LLM_MODE=foundry.")
+        raise ValueError(
+            "AZURE_AI_PROJECT_ENDPOINT is required when ATLAS_LLM_MODE=foundry."
+        )
 
     openai_client = _foundry_openai_client()
 
@@ -43,10 +49,14 @@ def ask_atlas(system_prompt: str, history: list[dict[str, str]], user_message: s
         conversation=conversation.id,
         input=prompt,
     )
+
     return _student_facing_output(response.output_text)
 
 
-def analyze_turn(student_message: str, tutor_context: dict[str, object]) -> TurnAnalysis:
+def analyze_turn(
+    student_message: str,
+    tutor_context: dict[str, object],
+) -> TurnAnalysis:
     settings = get_settings()
     mode = settings.atlas_llm_mode.lower()
 
@@ -57,18 +67,37 @@ def analyze_turn(student_message: str, tutor_context: dict[str, object]) -> Turn
         raise ValueError("ATLAS_LLM_MODE must be either 'mock' or 'foundry'.")
 
     try:
-        raw_response = _ask_foundry_for_turn_analysis(student_message, tutor_context)
-        return TurnAnalysis.model_validate(json.loads(raw_response))
+        raw_response = _ask_foundry_for_turn_analysis(
+            student_message,
+            tutor_context,
+        )
+
+        cleaned_response = _student_facing_output(raw_response)
+
+        return TurnAnalysis.model_validate(
+            json.loads(cleaned_response)
+        )
+
     except (json.JSONDecodeError, ValidationError, ValueError, AttributeError):
         return _empty_turn_analysis(tutor_context)
 
 
-def _compose_prompt(system_prompt: str, history: list[dict[str, str]], user_message: str) -> str:
+def _compose_prompt(
+    system_prompt: str,
+    history: list[dict[str, str]],
+    user_message: str,
+) -> str:
     history_lines = [
         f"{message.get('role', 'unknown')}: {message.get('content', '')}"
         for message in history
     ]
-    history_text = "\n".join(history_lines) if history_lines else "No prior messages."
+
+    history_text = (
+        "\n".join(history_lines)
+        if history_lines
+        else "No prior messages."
+    )
+
     return (
         f"{system_prompt}\n\n"
         f"Conversation so far:\n{history_text}\n\n"
@@ -76,17 +105,45 @@ def _compose_prompt(system_prompt: str, history: list[dict[str, str]], user_mess
     )
 
 
-def _mock_analyze_turn(student_message: str, tutor_context: dict[str, object]) -> TurnAnalysis:
+def _mock_analyze_turn(
+    student_message: str,
+    tutor_context: dict[str, object],
+) -> TurnAnalysis:
     message = student_message.casefold()
     concept = _context_concept(tutor_context)
+
     hint_used = "hint" in message
+
     asked_for_confirmation = any(
         phrase in message
-        for phrase in ("right?", "is this right", "is that right", "is this correct", "am i correct")
+        for phrase in (
+            "right?",
+            "is this right",
+            "is that right",
+            "is this correct",
+            "am i correct",
+        )
     )
-    transfer = any(phrase in message for phrase in ("new context", "transfer", "real world", "another example"))
 
-    if any(phrase in message for phrase in ("i don't know", "i dont know", "don't know", "dont know")):
+    transfer = any(
+        phrase in message
+        for phrase in (
+            "new context",
+            "transfer",
+            "real world",
+            "another example",
+        )
+    )
+
+    if any(
+        phrase in message
+        for phrase in (
+            "i don't know",
+            "i dont know",
+            "don't know",
+            "dont know",
+        )
+    ):
         return TurnAnalysis(
             concept=concept,
             answer_quality="dont_know",
@@ -96,7 +153,9 @@ def _mock_analyze_turn(student_message: str, tutor_context: dict[str, object]) -
             asked_for_confirmation=asked_for_confirmation,
         )
 
-    if "switch" in message and ("ip address" in message or "ip addresses" in message):
+    if "switch" in message and (
+        "ip address" in message or "ip addresses" in message
+    ):
         return TurnAnalysis(
             concept="switching",
             answer_quality="incorrect",
@@ -106,7 +165,14 @@ def _mock_analyze_turn(student_message: str, tutor_context: dict[str, object]) -
             asked_for_confirmation=asked_for_confirmation,
         )
 
-    if any(phrase in message for phrase in ("routing table", "next hop", "destination network")):
+    if any(
+        phrase in message
+        for phrase in (
+            "routing table",
+            "next hop",
+            "destination network",
+        )
+    ):
         return TurnAnalysis(
             concept=concept,
             answer_quality="correct",
@@ -116,7 +182,15 @@ def _mock_analyze_turn(student_message: str, tutor_context: dict[str, object]) -
             asked_for_confirmation=asked_for_confirmation,
         )
 
-    if any(phrase in message for phrase in ("maybe", "partly", "not fully", "kind of")):
+    if any(
+        phrase in message
+        for phrase in (
+            "maybe",
+            "partly",
+            "not fully",
+            "kind of",
+        )
+    ):
         return TurnAnalysis(
             concept=concept,
             answer_quality="partial",
@@ -136,21 +210,36 @@ def _mock_analyze_turn(student_message: str, tutor_context: dict[str, object]) -
     )
 
 
-def _ask_foundry_for_turn_analysis(student_message: str, tutor_context: dict[str, object]) -> str:
+def _ask_foundry_for_turn_analysis(
+    student_message: str,
+    tutor_context: dict[str, object],
+) -> str:
     settings = get_settings()
+
     if not settings.azure_ai_project_endpoint:
-        raise ValueError("AZURE_AI_PROJECT_ENDPOINT is required when ATLAS_LLM_MODE=foundry.")
+        raise ValueError(
+            "AZURE_AI_PROJECT_ENDPOINT is required when ATLAS_LLM_MODE=foundry."
+        )
 
     openai_client = _foundry_openai_client()
+
     conversation = openai_client.conversations.create()
+
     response = openai_client.responses.create(
         conversation=conversation.id,
-        input=_turn_analysis_prompt(student_message, tutor_context),
+        input=_turn_analysis_prompt(
+            student_message,
+            tutor_context,
+        ),
     )
+
     return response.output_text
 
 
-def _turn_analysis_prompt(student_message: str, tutor_context: dict[str, object]) -> str:
+def _turn_analysis_prompt(
+    student_message: str,
+    tutor_context: dict[str, object],
+) -> str:
     return (
         "Analyze this student turn for observable learning signals only. "
         "Return JSON only, with exactly these keys: concept, answer_quality, hint_used, "
@@ -162,12 +251,19 @@ def _turn_analysis_prompt(student_message: str, tutor_context: dict[str, object]
     )
 
 
-def _context_concept(tutor_context: dict[str, object]) -> str:
+def _context_concept(
+    tutor_context: dict[str, object],
+) -> str:
     topic = tutor_context.get("topic") or tutor_context.get("current_topic")
-    return str(topic or "current topic").strip().lower()
+
+    return str(
+        topic or "current topic"
+    ).strip().lower()
 
 
-def _empty_turn_analysis(tutor_context: dict[str, object]) -> TurnAnalysis:
+def _empty_turn_analysis(
+    tutor_context: dict[str, object],
+) -> TurnAnalysis:
     return TurnAnalysis(
         concept=_context_concept(tutor_context),
         answer_quality="none",
@@ -185,17 +281,31 @@ def grade_short_answer_with_model(
     keywords: list[str],
 ) -> bool | None:
     settings = get_settings()
+
     if settings.atlas_llm_mode.lower() != "foundry":
         return None
+
     try:
         raw_response = _ask_foundry_for_short_answer_grade(
             student_answer=student_answer,
             correct_answer=correct_answer,
             keywords=keywords,
         )
-        data = json.loads(raw_response)
+
+        # Foundry may return <thinking>...</thinking><final>...</final>.
+        # Strip those wrappers before parsing the JSON.
+        cleaned_response = _student_facing_output(raw_response)
+
+        data = json.loads(cleaned_response)
+
         return bool(data["correct"])
-    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+
+    except (
+        json.JSONDecodeError,
+        KeyError,
+        TypeError,
+        ValueError,
+    ):
         return None
 
 
@@ -206,11 +316,16 @@ def _ask_foundry_for_short_answer_grade(
     keywords: list[str],
 ) -> str:
     settings = get_settings()
+
     if not settings.azure_ai_project_endpoint:
-        raise ValueError("AZURE_AI_PROJECT_ENDPOINT is required when ATLAS_LLM_MODE=foundry.")
+        raise ValueError(
+            "AZURE_AI_PROJECT_ENDPOINT is required when ATLAS_LLM_MODE=foundry."
+        )
 
     openai_client = _foundry_openai_client()
+
     conversation = openai_client.conversations.create()
+
     response = openai_client.responses.create(
         conversation=conversation.id,
         input=(
@@ -221,6 +336,7 @@ def _ask_foundry_for_short_answer_grade(
             f"Student answer: {student_answer}"
         ),
     )
+
     return response.output_text
 
 
@@ -238,21 +354,41 @@ def _foundry_openai_client():
             exclude_visual_studio_code_credential=True,
         ),
     )
+
     return project.get_openai_client(
         agent_name=settings.azure_ai_agent_name,
-        default_headers={"Accept-Encoding": "gzip, deflate"},
+        default_headers={
+            "Accept-Encoding": "gzip, deflate"
+        },
     )
 
 
 def _student_facing_output(output_text: str) -> str:
     final_start = output_text.find("<final>")
     final_end = output_text.find("</final>")
+
+   
     if final_start != -1 and final_end != -1 and final_end > final_start:
-        return output_text[final_start + len("<final>") : final_end].strip()
+        return output_text[
+            final_start + len("<final>"):final_end
+        ].strip()
+
+    # Some Foundry responses contain <final> but omit </final>.
+    # In that case, everything after <final> is still student-facing content.
+    if final_start != -1:
+        return output_text[
+            final_start + len("<final>"):
+        ].strip()
 
     thinking_start = output_text.find("<thinking>")
     thinking_end = output_text.find("</thinking>")
-    if thinking_start != -1 and thinking_end != -1 and thinking_end > thinking_start:
-        return (output_text[:thinking_start] + output_text[thinking_end + len("</thinking>") :]).strip()
 
-    return output_text
+    if thinking_start != -1 and thinking_end != -1 and thinking_end > thinking_start:
+        return (
+            output_text[:thinking_start]
+            + output_text[
+                thinking_end + len("</thinking>"):
+            ]
+        ).strip()
+
+    return output_text.strip()
