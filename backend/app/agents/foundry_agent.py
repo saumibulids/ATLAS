@@ -35,14 +35,7 @@ def ask_atlas(system_prompt: str, history: list[dict[str, str]], user_message: s
     if not settings.azure_ai_project_endpoint:
         raise ValueError("AZURE_AI_PROJECT_ENDPOINT is required when ATLAS_LLM_MODE=foundry.")
 
-    from azure.ai.projects import AIProjectClient
-    from azure.identity import DefaultAzureCredential
-
-    project = AIProjectClient(
-        endpoint=settings.azure_ai_project_endpoint,
-        credential=DefaultAzureCredential(),
-    )
-    openai_client = project.get_openai_client(agent_name=settings.azure_ai_agent_name)
+    openai_client = _foundry_openai_client()
 
     conversation = openai_client.conversations.create()
     prompt = _compose_prompt(system_prompt, history, user_message)
@@ -50,7 +43,7 @@ def ask_atlas(system_prompt: str, history: list[dict[str, str]], user_message: s
         conversation=conversation.id,
         input=prompt,
     )
-    return response.output_text
+    return _student_facing_output(response.output_text)
 
 
 def analyze_turn(student_message: str, tutor_context: dict[str, object]) -> TurnAnalysis:
@@ -148,14 +141,7 @@ def _ask_foundry_for_turn_analysis(student_message: str, tutor_context: dict[str
     if not settings.azure_ai_project_endpoint:
         raise ValueError("AZURE_AI_PROJECT_ENDPOINT is required when ATLAS_LLM_MODE=foundry.")
 
-    from azure.ai.projects import AIProjectClient
-    from azure.identity import DefaultAzureCredential
-
-    project = AIProjectClient(
-        endpoint=settings.azure_ai_project_endpoint,
-        credential=DefaultAzureCredential(),
-    )
-    openai_client = project.get_openai_client(agent_name=settings.azure_ai_agent_name)
+    openai_client = _foundry_openai_client()
     conversation = openai_client.conversations.create()
     response = openai_client.responses.create(
         conversation=conversation.id,
@@ -223,14 +209,7 @@ def _ask_foundry_for_short_answer_grade(
     if not settings.azure_ai_project_endpoint:
         raise ValueError("AZURE_AI_PROJECT_ENDPOINT is required when ATLAS_LLM_MODE=foundry.")
 
-    from azure.ai.projects import AIProjectClient
-    from azure.identity import DefaultAzureCredential
-
-    project = AIProjectClient(
-        endpoint=settings.azure_ai_project_endpoint,
-        credential=DefaultAzureCredential(),
-    )
-    openai_client = project.get_openai_client(agent_name=settings.azure_ai_agent_name)
+    openai_client = _foundry_openai_client()
     conversation = openai_client.conversations.create()
     response = openai_client.responses.create(
         conversation=conversation.id,
@@ -243,3 +222,37 @@ def _ask_foundry_for_short_answer_grade(
         ),
     )
     return response.output_text
+
+
+def _foundry_openai_client():
+    settings = get_settings()
+
+    from azure.ai.projects import AIProjectClient
+    from azure.identity import DefaultAzureCredential
+
+    project = AIProjectClient(
+        endpoint=settings.azure_ai_project_endpoint,
+        credential=DefaultAzureCredential(
+            exclude_broker_credential=True,
+            exclude_shared_token_cache_credential=True,
+            exclude_visual_studio_code_credential=True,
+        ),
+    )
+    return project.get_openai_client(
+        agent_name=settings.azure_ai_agent_name,
+        default_headers={"Accept-Encoding": "gzip, deflate"},
+    )
+
+
+def _student_facing_output(output_text: str) -> str:
+    final_start = output_text.find("<final>")
+    final_end = output_text.find("</final>")
+    if final_start != -1 and final_end != -1 and final_end > final_start:
+        return output_text[final_start + len("<final>") : final_end].strip()
+
+    thinking_start = output_text.find("<thinking>")
+    thinking_end = output_text.find("</thinking>")
+    if thinking_start != -1 and thinking_end != -1 and thinking_end > thinking_start:
+        return (output_text[:thinking_start] + output_text[thinking_end + len("</thinking>") :]).strip()
+
+    return output_text
